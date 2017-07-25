@@ -1,0 +1,16 @@
+for the file train_10to17_train.csv
+
+column      count unique values
+siteid      172519
+category    271
+merchant    692
+countrycode 6
+browserid   12
+devid       4
+year        1
+month       1
+day         8
+hour        24
+minute      60
+second      60
+
