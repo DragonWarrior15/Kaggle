@@ -7,7 +7,7 @@ file = '../inputData/train_10to17_train.csv'
 
 columns = ['ID','datetime','siteid','offerid','category','merchant','countrycode','browserid','devid','click','year','month','day','hour','minute','second']
 cols_to_int_dict = dict([[columns[i], i] for i in range(len(columns))])
-cols_to_investigate = ['siteid','category','merchant','countrycode','browserid','devid','year','month','day','hour','minute','second']
+cols_to_investigate = ['siteid','offerid','category','merchant','countrycode','browserid','devid','year','month','day','hour','minute','second']
 target = ['click']
 
 univariate_dict = {}
@@ -42,11 +42,11 @@ with open(file, 'r') as f:
         else:
             firstLine = False
 
-with open('../inputData/univariate_pickle', 'wb') as f:
+with open('../analysis_graphs/univariate_pickle', 'wb') as f:
     pickle.dump(univariate_dict, f)
 
-print (univariate_dict['browserid'])
-print (univariate_dict['countrycode'])
-print (univariate_dict['day'])
+# print (univariate_dict['browserid'])
+# print (univariate_dict['countrycode'])
+# print (univariate_dict['day'])
 
-print (cols_to_int_dict)
+# print (cols_to_int_dict)
