@@ -10,14 +10,68 @@ target = ['click']
 with open('../analysis_graphs/univariate_pickle', 'rb') as f:
     univariate_dict = pickle.load(f)
 
-print ([k for k in univariate_dict])
+# print ([k for k in univariate_dict])
 
 for k in univariate_dict:
+    univariate_dict[k]['OTHERS'] = {0:0,1:0}
+    key_to_del = []
     for k1 in univariate_dict[k]:
-        for i in [0, 1]:
-            if i not in univariate_dict[k][k1]:
-                univariate_dict[k][k1][i] = 0
+        if 0 not in univariate_dict[k][k1] or 1 not in univariate_dict[k][k1]:
+            for i in [0, 1]:
+                try:
+                    univariate_dict[k]['OTHERS'][i] += univariate_dict[k][k1][i]
+                except KeyError:
+                    pass
+            key_to_del.append(k1)
 
+    for k1 in key_to_del:
+        del univariate_dict[k][k1]
+
+    if univariate_dict[k]['OTHERS'][0] == 0 and univariate_dict[k]['OTHERS'][1] == 0:
+        del univariate_dict[k]['OTHERS']
+
+# code to map some of the values
+for k in ['Google Chrome']:
+    for i in [0, 1]:
+        univariate_dict['browserid']['Chrome'][i] += univariate_dict['browserid'][k][i]
+    del univariate_dict['browserid'][k]
+
+for k in ['IE', 'Internet Explorer', 'Edge']:
+    for i in [0, 1]:
+        univariate_dict['browserid']['InternetExplorer'][i] += univariate_dict['browserid'][k][i]
+    del univariate_dict['browserid'][k]
+
+for k in ['Mozilla Firefox', 'Mozilla']:
+    for i in [0, 1]:
+        univariate_dict['browserid']['Firefox'][i] += univariate_dict['browserid'][k][i]
+    del univariate_dict['browserid'][k]
+
+day_to_weekday_dict = {10:'tue',
+                       11:'wed',
+                       12:'thu',
+                       13:'fri',
+                       14:'sat',
+                       15:'sun',
+                       16:'mon',
+                       17:'tue',
+                       18:'wed',
+                       19:'thu',
+                       20:'fri',
+                       21:'sat',
+                       22:'sun',
+                       23:'mon',
+                       }
+
+univariate_dict['day_temp'] = univariate_dict['day']
+del univariate_dict['day']
+univariate_dict['day'] = {}
+for x in ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']:
+    univariate_dict['day'][x] = {0:0,1:1}
+    for k in univariate_dict['day_temp']:
+        if x == day_to_weekday_dict[k]:
+            for i in [0, 1]:
+                univariate_dict['day'][x][i] += univariate_dict['day_temp'][k][i]
+del univariate_dict['day_temp']
 
 with open('../analysis_graphs/univariate_profile.csv', 'w') as f:
     f.write('variable,variable_value,0,1\n')
