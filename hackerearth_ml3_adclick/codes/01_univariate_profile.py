@@ -3,7 +3,7 @@ import pickle
 
 # file = '../inputData/train_sample.csv'
 # file = '../inputData/train.csv'
-file = '../inputData/train_10to17_train.csv'
+file = '../inputData/train_10to18_train.csv'
 
 columns = ['ID','datetime','siteid','offerid','category','merchant','countrycode','browserid','devid','click','year','month','day','hour','minute','second']
 cols_to_int_dict = dict([[columns[i], i] for i in range(len(columns))])

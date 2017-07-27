@@ -20,7 +20,7 @@ day_to_weekday_dict = {10:'tue',
 
 # get the woe values
 woe_dict = {}
-with open('../analysis_graphs/woe.csv', 'rb') as f:
+with open('../analysis_graphs/woe.csv', 'r') as f:
     firstLine = True
     # print (f.read())
     for line in f:
@@ -34,7 +34,7 @@ with open('../analysis_graphs/woe.csv', 'rb') as f:
         else:
             firstLine = False
 
-headers = ['category', 'merchant', 'offerid', 'siteid',
+header_list = ['category', 'merchant', 'offerid', 'siteid',
            'browserid_chrome', 'browserid_ie', 'browserid_firefox', 'browserid_opera', 'browserid_safari', 'browserid_blank',
            'countrycode_a', 'countrycode_b', 'countrycode_c', 'countrycode_d', 'countrycode_e', 'countrycode_f',
            'day_sun', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat',
@@ -102,12 +102,16 @@ output_file_list = [open('../inputData/train_10to17_train_processed.csv', 'w'),
                     open('../inputData/test_processed.csv', 'w')
                     ]
 
-file_list = ['../inputData/train_sample.csv']
-output_file_list = [open('../inputData/train_sample_processed.csv', 'w')]
+# file_list = ['../inputData/train_sample.csv']
+# output_file_list = [open('../inputData/train_sample_processed.csv', 'w')]
 
 
 for file, output_file in zip(file_list, output_file_list):
     with open(file, 'r') as f:
+        if 'test' in file:
+            headers = list(header_list[:-1])
+        else:
+            headers = list(header_list)
         firstLine = True
         # print (f.read())
         for line in f:
@@ -135,9 +139,13 @@ for file, output_file in zip(file_list, output_file_list):
                 for i in devid_dict[line[cols_to_int_dict['devid']]]:
                     str_to_write.append(str(i))
 
-                for field_name in ['ID', 'click']:
+                for field_name in ['ID']:
                     str_to_write.append(str(line[cols_to_int_dict[field_name]]))
-                
+
+                if 'test' not in file:
+                    for field_name in ['ID']:
+                        str_to_write.append(str(line[cols_to_int_dict[field_name]]))
+
                 output_file.write(','.join(str_to_write) + '\n')
 
             else:
