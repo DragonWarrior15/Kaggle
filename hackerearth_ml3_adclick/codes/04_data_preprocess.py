@@ -90,15 +90,13 @@ day_dict = {'sun' : [1,0,0,0,0,0,0],
             'sat' : [0,0,0,0,0,0,1]
 }
 
-file_list = ['../inputData/train_10to17_train.csv',
-             '../inputData/train_18to19_test.csv',
-             '../inputData/train_20_val.csv',
+file_list = ['../inputData/train_10to18_train.csv',
+             '../inputData/train_19to20_test.csv',
              '../inputData/test.csv'
              ]
 
-output_file_list = [open('../inputData/train_10to17_train_processed.csv', 'w'),
-                    open('../inputData/train_18to19_test_processed.csv', 'w'),
-                    open('../inputData/train_20_val_processed.csv', 'w'),
+output_file_list = [open('../inputData/train_10to18_train_processed.csv', 'w'),
+                    open('../inputData/train_19to20_test_processed.csv', 'w'),
                     open('../inputData/test_processed.csv', 'w')
                     ]
 
@@ -108,7 +106,7 @@ output_file_list = [open('../inputData/train_10to17_train_processed.csv', 'w'),
 
 for file, output_file in zip(file_list, output_file_list):
     with open(file, 'r') as f:
-        if 'test' in file:
+        if 'train' not in file:
             headers = list(header_list[:-1])
         else:
             headers = list(header_list)
@@ -142,8 +140,8 @@ for file, output_file in zip(file_list, output_file_list):
                 for field_name in ['ID']:
                     str_to_write.append(str(line[cols_to_int_dict[field_name]]))
 
-                if 'test' not in file:
-                    for field_name in ['ID']:
+                if 'train' in file:
+                    for field_name in ['click']:
                         str_to_write.append(str(line[cols_to_int_dict[field_name]]))
 
                 output_file.write(','.join(str_to_write) + '\n')
