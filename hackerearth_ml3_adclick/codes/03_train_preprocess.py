@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from scipy import sparse
+import pickle
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
@@ -14,8 +15,8 @@ from sklearn.ensemble import RandomForestClassifier
 np.random.seed(42)
 
 # df = pd.read_csv(c_vars.train_sample_file)
-df = pd.read_csv(c_vars.train_split_train_sample)
-# df = pd.read_csv(c_vars.train_split_train)
+# df = pd.read_csv(c_vars.train_split_train_sample)
+df = pd.read_csv(c_vars.train_split_train)
 df = df[c_vars.header_useful]
 
 df.fillna(c_vars.fillna_dict, inplace = True)
@@ -52,18 +53,24 @@ print (str(datetime.now()) + ' One Hot Encoding Complete')
 X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)-1) if i not in [0,5,6,7]]], X_ohe))
 
 # print (X.shape, y.shape, np.sum(y))
-sm = SMOTE(random_state=42)
-X, y = sm.fit_sample(X, y)
+# sm = SMOTE(random_state=42)
+# X, y = sm.fit_sample(X, y)
 # print (X.shape, y.shape, np.sum(y))
 
-chi2_values, p_values = chi2(X, y)
-print ('chi square values')
-print (chi2_values)
-print ('p values')
-print (p_values)
+# save the label encoder and the one hot encoding to disk
+with open('../analysis_graphs/label_encoder', 'wb') as f:
+    pickle.dump(label_encoder, f)
+with open('../analysis_graphs/one_hot_encoding', 'wb') as f:
+    pickle.dump(ohe, f)
 
-clf = RandomForestClassifier(n_estimators = 20, max_depth = 8, min_samples_leaf = 1000,
-                             random_state = 42, verbose = 2)
-clf.fit(X, y)
-print (clf.feature_importances_)
+# chi2_values, p_values = chi2(X, y)
+# print ('chi square values')
+# print (chi2_values)
+# print ('p values')
+# print (p_values)
+
+# clf = RandomForestClassifier(n_estimators = 100, max_depth = 8, min_samples_leaf = 100,
+                             # random_state = 42, verbose = 2)
+# clf.fit(X, y)
+# print (clf.feature_importances_)
 # feature_importances_
