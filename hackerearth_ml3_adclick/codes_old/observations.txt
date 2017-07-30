@@ -1,0 +1,35 @@
+for the file train_10to17_train.csv
+
+unique values before clubbing the values together in the OTHERS field
+browserid   12
+category    271
+countrycode 6
+day         8
+devid       4
+hour        24
+merchant    692
+minute      60
+month       1
+offerid     795948
+second      60
+siteid      172519
+year        1
+
+unique values after clubbing the values together in the OTHERS field, and making browser id mappings
+browserid   7
+category    270
+countrycode 6
+day         7
+devid       4
+hour        24
+merchant    684
+minute      60
+month       1
+offerid     125472
+second      60
+siteid      46088
+year        1
+
+
+one hot encode : browserid, countrycode, day, devid
+woe replacement : category, merchant, offerid, siteid
