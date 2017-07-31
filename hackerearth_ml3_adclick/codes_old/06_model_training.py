@@ -41,9 +41,9 @@ from sklearn.ensemble import RandomForestClassifier
 clf = RandomForestClassifier(n_estimators = 40, max_depth = 10, random_state = 42)
 '''
 np.random.seed(42)
-param_dict = {'learning_rate' : [0.05, 1],
-              'max_depth' : [5, 10],
-              'n_estimators' : [50, 100]}
+param_dict = {'learning_rate' : [0.05, 1, 3],
+              'max_depth' : [5, 10, 50, 100, 200],
+              'n_estimators' : [50, 100, 200]}
 # param_dict = {'learning_rate' : [0.05, 1, 2, 3],
 #               'max_depth' : [5, 10, 30, 50],
 #               'n_estimators' : [50, 100, 200, 300, 500]}
@@ -60,13 +60,13 @@ for param in param_list:
     else:
         for i in range(len(param_dict[param]) - 1):
             for j in range(curr_param_space_length):
-                param_space.append(list(param_space[j]))
+                param_space.append(list(param_space[j]) + [param_dict[param][i]])
 
-        for i in range(len(param_space)):
-            param_space[i].append(param_dict[param][i%len(param_dict[param])])
+        for i in range(curr_param_space_length):
+            param_space[i].append(param_dict[param][-1])
 
 # print (param_space)
-
+param_space = sorted(param_space)
 for param_list in param_space:
     # train xgboost model
     # import xgboost as xgb
@@ -74,8 +74,8 @@ for param_list in param_space:
     print('Training xgboost classifier, ' + str(param_list))
     # print (param_list[param_to_int_dict['learning_rate']], param_list[param_to_int_dict['max_depth']], param_list[param_to_int_dict['n_estimators']])
     clf = XGBClassifier(max_depth=param_list[param_to_int_dict['max_depth']], 
-                            n_estimators=param_list[param_to_int_dict['n_estimators']],
-                            learning_rate=param_list[param_to_int_dict['learning_rate']])
+                        n_estimators=param_list[param_to_int_dict['n_estimators']],
+                        learning_rate=param_list[param_to_int_dict['learning_rate']])
 
 
     clf.fit(X_train, y_train)
