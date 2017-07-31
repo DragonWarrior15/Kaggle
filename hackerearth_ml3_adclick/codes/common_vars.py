@@ -14,7 +14,7 @@ train_split_val = '../inputData/train_val.csv'
 # dictionaries for mapping similar items
 browserid_map = {'Google Chrome':'Chrome',
                  'InternetExplorer':'IE','Internet Explorer':'IE','Edge':'IE',
-                 'Mozilla Firefox':'FireFox','Mozilla':'Firefox'}
+                 'Mozilla Firefox':'Firefox','Mozilla':'Firefox'}
 
 fillna_dict = {'datetime':'-999', 'siteid':-999, 'offerid':-999, 'category':-999, 'merchant':-999,
                'countrycode':'-999', 'browserid':'-999', 'devid':'-999', 'click':-999}
