@@ -18,12 +18,14 @@ test_processed = '../inputData/test_processed'
 # dictionaries for mapping similar items
 browserid_map = {'Google Chrome':'Chrome',
                  'InternetExplorer':'IE','Internet Explorer':'IE','Edge':'IE',
-                 'Mozilla Firefox':'FireFox','Mozilla':'Firefox'}
+                 'Mozilla Firefox':'Firefox','Mozilla':'Firefox'}
 
 fillna_dict = {'datetime':'-999', 'siteid':-999, 'offerid':-999, 'category':-999, 'merchant':-999,
                'countrycode':'-999', 'browserid':'-999', 'devid':'-999', 'click':-999}
 
-col_index_training = [13, 19, 14, 24, 18, 20, 12, 26, 11]
+# col_index_training = [13, 19, 14, 24, 18, 20, 12, 26, 11]
+col_index_training = [6,12,5,7,11,17,19,4,13,18,8,9,16,26,48,47,10,24,49,46,44,42,25,23,43,50,41,40,14,20,39,15,38,27,2,21,22,28,37,45,36,35,0,3,1,34,33,29,32,31,30]
+col_index_ohe = [4, 5, 6, 7, 8]
 
 def get_param_space(param_dict):
     param_space = []

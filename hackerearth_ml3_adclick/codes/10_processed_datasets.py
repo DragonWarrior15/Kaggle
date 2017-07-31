@@ -21,11 +21,18 @@ df = df[c_vars.header_useful]
 
 df.fillna(c_vars.fillna_dict, inplace = True)
 
-df.loc[:, 'datetime'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
+df.loc[:, 'datetime_day'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
+df.loc[:, 'datetime_hour'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").hour)
+df = df.drop('datetime', axis=1)
 df.loc[:, 'browserid'] = df['browserid'].apply(lambda x: x if x not in c_vars.browserid_map 
                                                            else c_vars.browserid_map[x])
 
-X = df[c_vars.header_useful[:-1]].as_matrix()
+c_vars.header_useful.remove('datetime')
+c_vars.header_useful.remove('click')
+c_vars.header_useful.append('datetime_day')
+c_vars.header_useful.append('datetime_hour')
+
+X = df[c_vars.header_useful].as_matrix()
 y = df['click'].as_matrix()
 
 with open('../analysis_graphs/label_encoder', 'rb') as f:
@@ -39,12 +46,10 @@ for i in range(len(label_encoder)):
 print (str(datetime.now()) + ' Label Encoding Completed')
 
 print (str(datetime.now()) + ' One Hot Encoding Started')
-X_ohe = ohe.transform(X[:,[0,5,6,7]])
+X_ohe = ohe.transform(X[:,c_vars.col_index_ohe])
 print (str(datetime.now()) + ' One Hot Encoding Complete')
 
-X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)-1) if i not in [0,5,6,7]]], X_ohe))
-
-X = X[:,c_vars.col_index_training]
+X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)) if i not in c_vars.col_index_ohe]], X_ohe))
 
 print (X.shape, y.shape)
 sm = SMOTE(random_state=42)
@@ -56,16 +61,17 @@ with open(c_vars.train_spilt_train_processed, 'wb') as f:
 
 df_test = pd.read_csv(c_vars.train_split_val)
 df_test.fillna(c_vars.fillna_dict, inplace = True)
-df_test.loc[:, 'datetime'] = df_test['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
+df_test.loc[:, 'datetime_day'] = df_test['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
+df_test.loc[:, 'datetime_hour'] = df_test['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").hour)
+df_test = df_test.drop('datetime', axis=1)
 df_test.loc[:, 'browserid'] = df_test['browserid'].apply(lambda x: x if x not in c_vars.browserid_map 
                                                            else c_vars.browserid_map[x])
-X_test = df_test[c_vars.header_useful[:-1]].as_matrix()
+X_test = df_test[c_vars.header_useful].as_matrix()
 y_test = df_test['click'].as_matrix()
 for i in range(len(label_encoder)):
     X_test[:,i] = label_encoder[i].transform(X_test[:,i])
-X_test_ohe = ohe.transform(X_test[:,[0,5,6,7]])
-X_test = np.hstack((X_test[:,[i for i in range(len(c_vars.header_useful)-1) if i not in [0,5,6,7]]], X_test_ohe))
-X_test = X_test[:,c_vars.col_index_training]
+X_test_ohe = ohe.transform(X_test[:,c_vars.col_index_ohe])
+X_test = np.hstack((X_test[:,[i for i in range(len(c_vars.header_useful)-1) if i not in c_vars.col_index_ohe]], X_test_ohe))
 
 # save the X and y prepared
 with open(c_vars.train_spilt_val_processed, 'wb') as f:
@@ -75,15 +81,16 @@ with open(c_vars.train_spilt_val_processed, 'wb') as f:
 # submit set
 df_submit = pd.read_csv(c_vars.test_file)
 df_submit.fillna(c_vars.fillna_dict, inplace = True)
-df_submit.loc[:, 'datetime'] = df_submit['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
+df_submit.loc[:, 'datetime_day'] = df_submit['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
+df_submit.loc[:, 'datetime_hour'] = df_submit['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").hour)
+df_submit = df_submit.drop('datetime', axis=1)
 df_submit.loc[:, 'browserid'] = df_submit['browserid'].apply(lambda x: x if x not in c_vars.browserid_map 
                                                            else c_vars.browserid_map[x])
-X_submit = df_submit[c_vars.header_useful[:-1]].as_matrix()
+X_submit = df_submit[c_vars.header_useful].as_matrix()
 for i in range(len(label_encoder)):
     X_submit[:,i] = label_encoder[i].transform(X_submit[:,i])
-X_submit_ohe = ohe.transform(X_submit[:,[0,5,6,7]])
-X_submit = np.hstack((X_submit[:,[i for i in range(len(c_vars.header_useful)-1) if i not in [0,5,6,7]]], X_submit_ohe))
-X_submit = X_submit[:,c_vars.col_index_training]
+X_submit_ohe = ohe.transform(X_submit[:,c_vars.col_index_ohe])
+X_submit = np.hstack((X_submit[:,[i for i in range(len(c_vars.header_useful)-1) if i not in c_vars.col_index_ohe]], X_submit_ohe))
 
 with open(c_vars.test_processed, 'wb') as f:
     pickle.dump(X_submit, f)
