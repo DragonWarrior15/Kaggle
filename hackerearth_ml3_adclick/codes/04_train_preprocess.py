@@ -94,7 +94,6 @@ for i in range(len(label_encoder)):
 print (str(datetime.now()) + ' Label Encoding Completed')
 
 print (str(datetime.now()) + ' One Hot Encoding Started')
-cols_to_ohe = ['datetime', 'countrycode', 'browserid', 'devid']
 ohe = OneHotEncoder(sparse = False)
 ohe.fit(X[:,[0,1,2,3,4]])
 # print (ohe.get_params(deep=True))
@@ -104,6 +103,16 @@ print (X.shape, X_ohe.shape)
 # print (X.shape, X_ohe.shape)
 # print (X, X_ohe)
 X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)) if i not in [0,1,2,3,4]]], X_ohe))
+
+# save the label encoder and the one hot encoding to disk
+with open('../analysis_graphs/label_encoder', 'wb') as f:
+    pickle.dump(label_encoder, f)
+with open('../analysis_graphs/one_hot_encoding', 'wb') as f:
+    pickle.dump(ohe, f)
+with open('../analysis_graphs/df_feature', 'wb') as f:
+    pickle.dump(df_feature, f)
+
+'''
 
 print (X.shape, y.shape, np.sum(y))
 sm = SMOTE(random_state=42)
@@ -121,4 +130,4 @@ clf = RandomForestClassifier(n_estimators = 200, max_depth = 10, min_samples_lea
 clf.fit(X, y)
 print (clf.feature_importances_)
 # feature_importances_
-
+'''

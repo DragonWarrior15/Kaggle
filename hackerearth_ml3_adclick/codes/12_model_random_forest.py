@@ -21,7 +21,7 @@ param_dict = {'max_depth' : [5, 18, 15],
               'min_samples_leaf' : [1, 2, 5, 10]}
 
 param_space, param_to_int_dict = c_vars.get_param_space(param_dict)
-param_space = [[15, 5, 5, 300]]
+param_space = [[5, 2, 5, 120]]
 for param_list in param_space:
     # train xgboost model
     # import xgboost as xgb
@@ -32,13 +32,13 @@ for param_list in param_space:
                                  min_samples_split=param_list[param_to_int_dict['min_samples_split']],
                                  min_samples_leaf=param_list[param_to_int_dict['min_samples_leaf']])
 
-    clf.fit(X, y)
+    clf.fit(X[:,c_vars.col_index_training[:c_vars.num_features_for_model]], y)
     print (str(datetime.now()) + ' Model Training Complete')
 
     print (str(datetime.now()) + ' Making Predictions on train set')
     # predict on the test set
-    y_pred = clf.predict(X)
-    y_pred_proba = clf.predict_proba(X)
+    y_pred = clf.predict(X[:,c_vars.col_index_training[:c_vars.num_features_for_model]])
+    y_pred_proba = clf.predict_proba(X[:,c_vars.col_index_training[:c_vars.num_features_for_model]])
     y_pred_proba_1 = y_pred_proba[:,1]
 
     # get the accuracies and relevant metrics
@@ -51,8 +51,8 @@ for param_list in param_space:
 
     print (str(datetime.now()) + ' Making Predictions on test set')
     # predict on the test set
-    y_test_pred = clf.predict(X_test)
-    y_test_pred_proba = clf.predict_proba(X_test)
+    y_test_pred = clf.predict(X_test[:,c_vars.col_index_training[:c_vars.num_features_for_model]])
+    y_test_pred_proba = clf.predict_proba(X_test[:,c_vars.col_index_training[:c_vars.num_features_for_model]])
     y_test_pred_proba_1 = y_test_pred_proba[:,1]
 
     # get the accuracies and relevant metrics

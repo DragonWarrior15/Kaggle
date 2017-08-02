@@ -3,17 +3,17 @@ header_name_from_col = dict([[i, header[i]] for i in range(len(header))])
 header_col_from_name = dict([[header[i], i] for i in range(len(header))])
 header_useful = ['datetime', 'siteid', 'offerid', 'category', 'merchant', 'countrycode', 'browserid', 'devid', 'click']
 
-train_sample_file = '../inputData/train_sample.csv'
-train_file = '../inputData/train.csv'
-test_file = '../inputData/test.csv'
+train_sample_file = '/data/vaibhav.ojha/inputData/train_sample.csv'
+train_file = '/data/vaibhav.ojha/inputData/train.csv'
+test_file = '/data/vaibhav.ojha/inputData/test.csv'
 
-train_split_train = '../inputData/train_train.csv'
-train_split_train_sample = '../inputData/train_train_sample.csv'
-train_split_val = '../inputData/train_val.csv'
+train_split_train = '/data/vaibhav.ojha/inputData/train_train.csv'
+train_split_train_sample = '/data/vaibhav.ojha/inputData/train_train_sample.csv'
+train_split_val = '/data/vaibhav.ojha/inputData/train_val.csv'
 
-train_spilt_train_processed = '../inputData/train_train_processed'
-train_spilt_val_processed = '../inputData/train_val_processed'
-test_processed = '../inputData/test_processed'
+train_spilt_train_processed = '/data/vaibhav.ojha/inputData/train_train_processed'
+train_spilt_val_processed = '/data/vaibhav.ojha/inputData/train_val_processed'
+test_processed = '/data/vaibhav.ojha/inputData/test_processed'
 
 # dictionaries for mapping similar items
 browserid_map = {'Google Chrome':'Chrome',
@@ -21,12 +21,12 @@ browserid_map = {'Google Chrome':'Chrome',
                  'Mozilla Firefox':'Firefox','Mozilla':'Firefox'}
 
 fillna_dict = {'datetime':'-999', 'siteid':-999, 'offerid':-999, 'category':-999, 'merchant':-999,
-               'countrycode':'-999', 'browserid':'-999', 'devid':'-999', 'click':-999}
+               'countrycode':'-999', 'browserid':'-999', 'devid':'-999', 'click':0}
 
 # col_index_training = [13, 19, 14, 24, 18, 20, 12, 26, 11]
-col_index_training = [6,12,5,7,11,17,19,4,13,18,8,9,16,26,48,47,10,24,49,46,44,42,25,23,43,50,41,40,14,20,39,15,38,27,2,21,22,28,37,45,36,35,0,3,1,34,33,29,32,31,30]
-col_index_ohe = [4, 5, 6, 7, 8]
-
+col_index_training = [18,11,24,7,17,10,19,31,5,6,4,23,29,16,25,30,21,20,60,9,28,59,8,3,61,55,22,56,54,52,15,38,62,58,2,53,51,27,26,39,0,37,50,36,1,35,49,14,12,48,47,32,13,57,33,40,34,45,46,41,43,42,44]
+col_index_ohe = [0,1,2,3,4]
+num_features_for_model = 19
 def get_param_space(param_dict):
     param_space = []
     param_list = sorted(list([k for k in param_dict]))
