@@ -18,20 +18,20 @@ np.random.seed(42)
 
 with open('../analysis_graphs/label_encoder', 'rb') as f:
     label_encoder = pickle.load(f)
-with open('../analysis_graphs/one_hot_encoding', 'rb') as f:
-    ohe = pickle.load(f)
+
 with open('../analysis_graphs/df_feature', 'rb') as f:
     df_feature = pickle.load(f)
 
-for col in ['datetime', 'click', 'merchant', 'siteid', 'offerid', 'category']:
+for col in ['datetime', 'click']:
     c_vars.header_useful.remove(col)
 
 c_vars.header_useful.append('datetime_day')
 c_vars.header_useful.append('datetime_hour')
+c_vars.header_useful.append('datetime_minute')
 
-for col in ['merchant', 'siteid', 'offerid', 'category']:
+for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_minute']:
     for col2 in ['count', 'num_0', 'num_1', 'click_rate']:
-        c_vars.header_useful.append(col2 + '_' + col)
+        c_vars.header_useful.append(col + '_' + col2)
 
 print (c_vars.header_useful)
 
@@ -42,33 +42,40 @@ def transformation_pipeline(df):
 
     df.loc[:, 'datetime_day'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
     df.loc[:, 'datetime_hour'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").hour)
+    df.loc[:, 'datetime_minute'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").minute)
     df = df.drop('datetime', axis=1)
-    df.loc[:, 'browserid'] = df['browserid'].apply(lambda x: x if x not in c_vars.browserid_map 
-                                                               else c_vars.browserid_map[x])
 
     for col in ['merchant', 'siteid', 'offerid', 'category']:
+        df[col] = df[col].astype(np.int64)
+
+    for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_minute']:
     # for col in ['merchant']:
         df = pd.merge(df, df_feature[col], how = 'left', on = col, suffixes = ('', ''))
-        df.rename(columns = {'count':'count_'+col, 'num_0':'num_0_'+col, 
-                             'num_1':'num_1_'+col, 'click_rate':'click_rate_'+col}, 
+        df.rename(columns = {'count':col+'_count', 'num_0':col+'_num_0', 
+                             'num_1':col+'_num_1', 'click_rate':col+'_click_rate'}, 
                   inplace = True)
-        for field in ['count', 'num_0', 'num_1', 'click_rate']:
-            df[field + '_' + col].fillna(df_feature[col].loc[df_feature[col][col] == 'LESS_FREQ', field].values[0], inplace = True)
 
+    if col in ['merchant', 'siteid', 'offerid', 'category']:
+        for field in ['count', 'num_0', 'num_1', 'click_rate']:
+            df[col + '_' + field].fillna(df_feature[col].loc[df_temp[col] == 'LESS_FREQ', field].values[0], inplace = True)
+
+
+    for index, col in enumerate(['siteid', 'offerid', 'category', 'merchant', 'countrycode', 'browserid', 'devid']):
+        val_to_set = -9999 if col in ['siteid', 'offerid', 'category', 'merchant'] else 'other'
+        df.loc[~df[col].isin(label_encoder[index].classes_), col] = 'other'
+        print (col, len(df[~df[col].isin(label_encoder[index].classes_)]))
+        # print (label_encoder[index].classes_)
+
+    # print (label_encoder[3].classes_.shape)
 
     X = df[c_vars.header_useful].as_matrix()
     # y = df['click'].as_matrix()
 
     print (str(datetime.now()) + ' Label Encoding Started')
     for i in range(len(label_encoder)):
+        print (i)
         X[:,i] = label_encoder[i].transform(X[:,i])
     print (str(datetime.now()) + ' Label Encoding Completed')
-
-    print (str(datetime.now()) + ' One Hot Encoding Started')
-    X_ohe = ohe.transform(X[:,c_vars.col_index_ohe])
-    print (str(datetime.now()) + ' One Hot Encoding Complete')
-
-    X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)) if i not in c_vars.col_index_ohe]], X_ohe))
 
     return (X)
 
@@ -76,11 +83,6 @@ def transformation_pipeline(df):
 df = pd.read_csv(c_vars.train_split_train_sample)
 X = transformation_pipeline(df)
 y = df['click'].as_matrix()
-print (X.shape, y.shape)
-sm = SMOTE(random_state=42)
-X, y = sm.fit_sample(X, y)
-print (X.shape, y.shape)
-_, X, _, y = train_test_split(X, y, test_size = 0.1, random_state = 42)
 print (X.shape, y.shape)
 # save the X and y prepared
 with open(c_vars.train_spilt_train_processed, 'wb') as f:
