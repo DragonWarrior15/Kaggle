@@ -14,6 +14,9 @@ np.random.seed(42)
 print(str(datetime.now()) + ' Reading Data')
 with open(c_vars.train_spilt_train_processed, 'rb') as f:
     X, y = pickle.load(f)
+
+print (X.shape, y.shape)
+
 '''
 with open(c_vars.train_spilt_val_processed, 'rb') as f:
     X_test, y_test = pickle.load(f)
@@ -39,9 +42,9 @@ for param_list in param_space:
                                  random_state = 42)
     kf_index = 0
     for train_indices, test_indices in kf.split(X):
-        # print (param_list[param_to_int_dict['learning_rate']], param_list[param_to_int_dict['max_depth']], param_list[param_to_int_dict['n_estimators']])
-        X_train, y_train = X[train_indices][train_columns], y[train_indices]
-        X_test, y_test = X[test_indices][train_columns], y[test_indices]
+        X_train, X_test = X[train_indices], X[test_indices]
+        X_train, X_test = X_train[:, train_columns], X_test[:, train_columns]
+        y_train, y_test = y[train_indices], y[test_indices]
 
         clf.fit(X_train, y_train)
         print (str(datetime.now()) + ' Model Training Complete')
@@ -51,9 +54,10 @@ for param_list in param_space:
             y_pred_proba = clf.predict_proba(myX)
 
             print (str(datetime.now()) + ' KF_Index,' + Set + ',Accuracy,Confusion_Matrix,AUC')
-            print (','.join([kf_index, Set, skmetrics.accuracy_score(y, y_pred), 
-                        skmetrics.confusion_matrix(y, y_pred).tolist(), skmetrics.roc_auc_score(y, y_pred_proba[:,1])]))
+            print (','.join([str(kf_index), Set, str(skmetrics.accuracy_score(myY, y_pred)), 
+                        str(skmetrics.confusion_matrix(myY, y_pred).tolist()), str(skmetrics.roc_auc_score(myY, y_pred_proba[:,1]))]))
 
+        # print (clf.feature_importances_)
         kf_index += 1
 
 '''

@@ -29,9 +29,10 @@ df.fillna(c_vars.fillna_dict, inplace = True)
     # print (col)
     # print (df[col].unique())
 # print (df.dtypes)
-df.loc[:, 'datetime_day'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").day%7)
-df.loc[:, 'datetime_hour'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").hour)
-df.loc[:, 'datetime_minute'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").minute)
+# df['datetime'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"))
+df['datetime'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"))
+df['datetime_day'] = df['datetime'].apply(lambda x: x.day%7)
+df['datetime_hour'] = df['datetime'].apply(lambda x: x.hour)
 df = df.drop('datetime', axis=1)
 
 for col in ['merchant', 'siteid', 'offerid', 'category']:
@@ -43,7 +44,7 @@ threshold_dict = {'merchant':0.99, 'siteid':0.8, 'offerid':0.8, 'category':0.99}
 
 # merchant, siteid, offerid, category
 df_feature = {}
-for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_minute']:
+for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day']:
 # for col in ['merchant']:
     df_temp = df[[col, 'click']]
     df_temp = df_temp.groupby([col]).agg(['count', np.sum])
@@ -59,7 +60,7 @@ for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browser
     if col in ['merchant', 'siteid', 'offerid', 'category']:
         df_temp_2 = df_temp.loc[df_temp['cumul_sum'] > threshold_dict[col] * len(df), :]
         df_temp = df_temp.loc[~(df_temp['cumul_sum'] > threshold_dict[col] * len(df)), :]
-        df_temp = df_temp.append({col:'LESS_FREQ', 
+        df_temp = df_temp.append({col:-99999, 
                                   'count':np.sum(df_temp_2['count']), 
                                   'num_0':np.sum(df_temp_2['num_0']),
                                   'num_1':np.sum(df_temp_2['num_1'])},
@@ -75,49 +76,56 @@ for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browser
               inplace = True)
     if col in ['merchant', 'siteid', 'offerid', 'category']:
         for field in ['count', 'num_0', 'num_1', 'click_rate']:
-            df[col + '_' + field].fillna(df_feature[col].loc[df_temp[col] == 'LESS_FREQ', field].values[0], inplace = True)
+            df[col + '_' + field].fillna(df_feature[col].loc[df_temp[col] == -99999, field].values[0], inplace = True)
     # print (df.columns.values)
 
     # print (df)
 # print (df)
 print (df.columns.values)
 
-for col in ['datetime', 'click']:
+for col in df.columns.tolist():
+    print (col, np.sum(df[col].isnull()), df[col].dtype)
+
+for col in ['datetime', 'click', 'merchant', 'siteid', 'offerid', 'category']:
     c_vars.header_useful.remove(col)
 
 c_vars.header_useful.append('datetime_day')
 c_vars.header_useful.append('datetime_hour')
-c_vars.header_useful.append('datetime_minute')
 
 for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_minute']:
     for col2 in ['count', 'num_0', 'num_1', 'click_rate']:
         c_vars.header_useful.append(col + '_' + col2)
 
 print (c_vars.header_useful)
-# for col in ['countrycode', 'browserid', 'devid', 'datetime_day', 'datetime_hour']:
-    # print (df[col].unique().tolist())
 
 X = df[c_vars.header_useful].as_matrix()
 y = df['click'].as_matrix()
 
 print (str(datetime.now()) + ' Label Encoding Started')
-
-label_encoder = [LabelEncoder() for _ in range(7)]
+label_encoder = [LabelEncoder() for _ in range(3)]
 for i in range(len(label_encoder)):
-    X[:,i] = label_encoder[i].fit_transform(X[:,i])
-    le_classes = label_encoder[i].classes_.tolist()
-    if i in [4, 5, 6]:
-        bisect.insort_left(le_classes, 'other')
-    else:
-        bisect.insort_left(le_classes, -9999)
-    label_encoder[i].classes_ = le_classes
-
+    label_encoder[i].fit(X[:,i])
+    # print (i, c_vars.header_useful[i], label_encoder[i].get_params(deep=True))
+    X[:,i] = label_encoder[i].transform(X[:,i])
 print (str(datetime.now()) + ' Label Encoding Completed')
+
+print (str(datetime.now()) + ' OHE Started')
+
+ohe = OneHotEncoder(sparse = False)
+ohe.fit(X[:,[0,1,2,3,4,5]])
+X_ohe = ohe.transform(X[:,[0,1,2,3,4,5]])
+print (str(datetime.now()) + ' OHE Completed')
+
+X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)) if i not in [0,1,2,3,4,5]]], X_ohe))
+
 '''
 '''
 # save the label encoder and the one hot encoding to disk
 with open('../analysis_graphs/label_encoder', 'wb') as f:
     pickle.dump(label_encoder, f)
+
+with open('../analysis_graphs/ohe', 'wb') as f:
+    pickle.dump(ohe, f)
 
 with open('../analysis_graphs/df_feature', 'wb') as f:
     pickle.dump(df_feature, f)
