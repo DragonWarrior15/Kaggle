@@ -10,7 +10,7 @@ from sklearn.model_selection import KFold, cross_val_score
 import sklearn.metrics as skmetrics
 
 # np.random.seed(42)
-
+'''
 print(str(datetime.now()) + ' Reading Data')
 with open(c_vars.train_spilt_train_processed, 'rb') as f:
     X, y = pickle.load(f)
@@ -60,21 +60,22 @@ for param_list in param_space:
             print (','.join([str(kf_index), Set, str(skmetrics.accuracy_score(myY, y_pred)), 
                         str(skmetrics.confusion_matrix(myY, y_pred).tolist()), str(skmetrics.roc_auc_score(myY, y_pred_proba[:,1]))]))
 
-        # print (clf.feature_importances_)
+        print (clf.feature_importances_)
         kf_index += 1
 
-with open('../analysis_graphs/rf_1', 'wb') as f:
+with open('../analysis_graphs/rf_2', 'wb') as f:
     pickle.dump(model_list, f)
+'''
+
+with open('../analysis_graphs/rf_2', 'rb') as f:
+    model_list = pickle.load(f)
 
 print (str(datetime.now()) + ' Reading submit set')
 df_submit = pd.read_csv(c_vars.test_file, usecols = ['ID'])
 with open(c_vars.test_processed, 'rb') as f:
   X_submit = pickle.load(f)
 print (str(datetime.now()) + ' Predicting on submit set')
-y_submit_pred = np.sum([0.25 * model_list[i].predict(X_submit) for i in range(4)])
-y_submit_pred_proba = clf.predict_proba(X_submit[:,train_columns])
-y_submit_pred_proba_1 = y_submit_pred_proba[:,1]
-y_submit_pred_proba_1 = np.array([y_submit_pred_proba[i][1] for i in range(len(X_submit))])
+y_submit_pred_proba_1 = np.sum([0.25 * model_list[i].predict_proba(X_submit)[:,1] for i in range(4)], axis = 0)
 df_submit['click'] = y_submit_pred_proba_1
 
 df_submit[['ID', 'click']].to_csv('../output/submit_' + datetime.now().strftime("%Y%m%d_%H%M%S") + '.csv', index = False)
