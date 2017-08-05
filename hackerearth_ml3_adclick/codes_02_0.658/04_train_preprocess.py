@@ -20,7 +20,9 @@ np.random.seed(42)
 
 # df = pd.read_csv(c_vars.train_file)
 # df = pd.read_csv(c_vars.train_split_train_sample, nrows = 10000)
+print(str(datetime.now()) + ' Reading Data')
 df = pd.read_csv(c_vars.train_split_train)
+print(str(datetime.now()) + ' Reading Data Complete')
 # df = df[c_vars.header_useful]
 
 df.fillna(c_vars.fillna_dict, inplace = True)
@@ -40,7 +42,9 @@ for col in ['merchant', 'siteid', 'offerid', 'category']:
 # df.loc[:, 'browserid'] = df['browserid'].apply(lambda x: x if x not in c_vars.browserid_map 
                                                            # else c_vars.browserid_map[x])
 
-threshold_dict = {'merchant':0.99, 'siteid':0.8, 'offerid':0.8, 'category':0.99}
+threshold_dict = {'merchant':0.99, 'siteid':0.8, 'offerid':0.8, 'category':0.99,
+                  'countrycode_merchant':0.99, 'countrycode_siteid':0.8, 'countrycode_offerid':0.8, 'countrycode_category':0.99
+                  }
 
 # merchant, siteid, offerid, category
 df_feature = {}
@@ -79,6 +83,42 @@ for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browser
             df[col + '_' + field].fillna(df_feature[col].loc[df_temp[col] == -99999, field].values[0], inplace = True)
     # print (df.columns.values)
 
+for col1 in ['countrycode']:
+    for col2 in ['merchant', 'siteid', 'offerid', 'category']:
+        col = col1 + '_' + col2
+        df_temp = df[[col1, col2, 'click']]
+        df_temp = df_temp.groupby([col1, col2]).agg(['count', np.sum])
+        df_temp.reset_index(inplace = True)
+        df_temp['count'] = df_temp['click', 'count']
+        df_temp['num_1'] = df_temp['click', 'sum']
+        df_temp['num_0'] = df_temp['count'] - df_temp['num_1']
+        df_temp = df_temp[[col1, col2, 'count', 'num_0', 'num_1']]
+        df_temp.columns = df_temp.columns.get_level_values(0)
+        df_temp.sort_values('count', inplace = True, axis = 0, ascending = False)
+        df_temp['cumul_sum'] = np.cumsum(df_temp['count'])
+
+        if col2 in ['merchant', 'siteid', 'offerid', 'category']:
+            df_temp_2 = df_temp.loc[df_temp['cumul_sum'] > threshold_dict[col] * len(df), :]
+            df_temp = df_temp.loc[~(df_temp['cumul_sum'] > threshold_dict[col] * len(df)), :]
+            df_temp = df_temp.append({col1:-999999, col2:-999999, 
+                                      'count':np.sum(df_temp_2['count']), 
+                                      'num_0':np.sum(df_temp_2['num_0']),
+                                      'num_1':np.sum(df_temp_2['num_1'])},
+                                     ignore_index = True)
+
+        df_temp['click_rate'] = df_temp['num_1']/df_temp['count']
+        df_temp.drop(['cumul_sum'], inplace = True, axis = 1)
+        df_feature[col] = df_temp.loc[:,:]
+
+        df = pd.merge(df, df_temp, how = 'left', on = [col1, col2], suffixes = ('', ''))
+        df.rename(columns = {'count':col+'_count', 'num_0':col+'_num_0', 
+                         'num_1':col+'_num_1', 'click_rate':col+'_click_rate'}, 
+              inplace = True)
+        if col in ['countrycode_' + x for x in ['merchant', 'siteid', 'offerid', 'category']]:
+            for field in ['count', 'num_0', 'num_1', 'click_rate']:
+                df[col + '_' + field].fillna(df_feature[col].loc[(df_temp[col1] == -999999) & (df_temp[col2] == -999999),
+                                             field].values[0], inplace = True)
+
     # print (df)
 # print (df)
 print (df.columns.values)
@@ -92,14 +132,22 @@ for col in ['datetime', 'click', 'merchant', 'siteid', 'offerid', 'category']:
 c_vars.header_useful.append('datetime_day')
 c_vars.header_useful.append('datetime_hour')
 
-for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_minute']:
+for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day',
+            'countrycode_merchant', 'countrycode_siteid', 'countrycode_offerid', 'countrycode_category']:
     for col2 in ['count', 'num_0', 'num_1', 'click_rate']:
         c_vars.header_useful.append(col + '_' + col2)
 
 print (c_vars.header_useful)
 
+with open('../analysis_graphs/df_feature', 'wb') as f:
+    pickle.dump(df_feature, f)
+
+del df_feature
+
 X = df[c_vars.header_useful].as_matrix()
 y = df['click'].as_matrix()
+
+del df
 
 print (str(datetime.now()) + ' Label Encoding Started')
 label_encoder = [LabelEncoder() for _ in range(3)]
@@ -112,11 +160,13 @@ print (str(datetime.now()) + ' Label Encoding Completed')
 print (str(datetime.now()) + ' OHE Started')
 
 ohe = OneHotEncoder(sparse = False)
-ohe.fit(X[:,[0,1,2,3,4,5]])
-X_ohe = ohe.transform(X[:,[0,1,2,3,4,5]])
+ohe.fit(X[:,[0,1,2,3,4]])
+# X_ohe = ohe.transform(X[:,[0,1,2,3,4]])
 print (str(datetime.now()) + ' OHE Completed')
 
-X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)) if i not in [0,1,2,3,4,5]]], X_ohe))
+# X = X[:,[i for i in range(len(c_vars.header_useful)) if i not in [0,1,2,3,4,5]]]
+
+# X = np.hstack((X, X_ohe))
 
 '''
 '''
@@ -126,10 +176,6 @@ with open('../analysis_graphs/label_encoder', 'wb') as f:
 
 with open('../analysis_graphs/ohe', 'wb') as f:
     pickle.dump(ohe, f)
-
-with open('../analysis_graphs/df_feature', 'wb') as f:
-    pickle.dump(df_feature, f)
-
 
 
 '''

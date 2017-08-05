@@ -31,7 +31,8 @@ for col in ['datetime', 'click', 'merchant', 'siteid', 'offerid', 'category']:
 c_vars.header_useful.append('datetime_day')
 c_vars.header_useful.append('datetime_hour')
 
-for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day']:
+for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day',
+            'countrycode_merchant', 'countrycode_siteid', 'countrycode_offerid', 'countrycode_category']:
     for col2 in ['count', 'num_0', 'num_1', 'click_rate']:
         c_vars.header_useful.append(col + '_' + col2)
 
@@ -45,7 +46,6 @@ def transformation_pipeline(df):
     df['datetime'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"))
     df['datetime_day'] = df['datetime'].apply(lambda x: x.day%7)
     df['datetime_hour'] = df['datetime'].apply(lambda x: x.hour)
-    df['datetime_minute'] = df['datetime'].apply(lambda x: x.minute)
     df = df.drop('datetime', axis=1)
 
     for col in ['merchant', 'siteid', 'offerid', 'category']:
@@ -58,28 +58,40 @@ def transformation_pipeline(df):
                              'num_1':col+'_num_1', 'click_rate':col+'_click_rate'}, 
                   inplace = True)
 
-        print (df.columns.tolist())
+        # print (df.columns.tolist())
 
         if col in ['merchant', 'siteid', 'offerid', 'category']:
             for field in ['count', 'num_0', 'num_1', 'click_rate']:
                 df[col + '_' + field].fillna(df_feature[col].loc[df_feature[col][col] == -99999, field].values[0], inplace = True)
 
+    for col1 in ['countrycode']:
+        for col2 in ['merchant', 'siteid', 'offerid', 'category']:
+            col = col1 + '_' + col2
+            df = pd.merge(df, df_feature[col], how = 'left', on = [col1, col2], suffixes = ('', ''))
+            df.rename(columns = {'count':col+'_count', 'num_0':col+'_num_0', 
+                             'num_1':col+'_num_1', 'click_rate':col+'_click_rate'}, 
+                  inplace = True)
+            if col in ['countrycode_' + x for x in ['merchant', 'siteid', 'offerid', 'category']]:
+                for field in ['count', 'num_0', 'num_1', 'click_rate']:
+                    df[col + '_' + field].fillna(df_feature[col].loc[(df_feature[col][col1] == -999999) & (df_feature[col][col2] == -999999),
+                                                 field].values[0], inplace = True)
+    
     for col in df.columns.tolist():
         print (col, np.sum(df[col].isnull()), df[col].dtype)
-
+    
     X = df[c_vars.header_useful].as_matrix()
-
+    del df
     print (str(datetime.now()) + ' Label Encoding Started')
     for i in range(len(label_encoder)):
         X[:,i] = label_encoder[i].transform(X[:,i])
     print (str(datetime.now()) + ' Label Encoding Completed')
 
     print (str(datetime.now()) + ' OHE Started')
-    X_ohe = ohe.transform(X[:,[0,1,2,3,4,5]])
+    X_ohe = ohe.transform(X[:,[0,1,2,3,4]])
     print (str(datetime.now()) + ' OHE Completed')
 
-    X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)) if i not in [0,1,2,3,4,5]]], X_ohe))
-
+    X = np.hstack((X[:,[i for i in range(len(c_vars.header_useful)) if i not in [0,1,2,3,4]]], X_ohe))
+    del X_ohe
     return (X)
 
 '''
@@ -92,19 +104,18 @@ with open(c_vars.train_spilt_train_processed, 'wb') as f:
     pickle.dump([X, y], f)
 '''
 
-
-df_unseen = pd.read_csv(c_vars.train_split_val)
-X_unseen = transformation_pipeline(df_unseen)
-y_unseen = df_unseen['click'].as_matrix()
+'''
+df = pd.read_csv(c_vars.train_split_val)
+X_unseen = transformation_pipeline(df)
+y_unseen = df['click'].as_matrix()
 # save the X and y prepared
 with open(c_vars.train_spilt_val_processed, 'wb') as f:
     pickle.dump([X_unseen, y_unseen], f)
-
-
 '''
+
+
 # submit set
 df_submit = pd.read_csv(c_vars.test_file)
 X_submit = transformation_pipeline(df_submit)
 with open(c_vars.test_processed, 'wb') as f:
     pickle.dump(X_submit, f)
-'''

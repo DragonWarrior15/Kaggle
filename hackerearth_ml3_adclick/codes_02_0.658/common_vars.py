@@ -16,6 +16,7 @@ train_split_val = pre_path + 'inputData/train_val.csv'
 train_split_train_0 = pre_path + 'inputData/train_train_0.csv'
 
 train_spilt_train_processed = pre_path + 'inputData/train_train_processed'
+train_spilt_train_processed_10000 = pre_path + 'inputData/train_train_processed_10000'
 train_spilt_val_processed = pre_path + 'inputData/train_val_processed'
 test_processed = pre_path + 'inputData/test_processed'
 
@@ -55,7 +56,3 @@ def get_param_space(param_dict):
     param_space = sorted(param_space)
     return (param_space, param_to_int_dict)
 
-
-'''
-['ID', 'siteid', 'offerid', 'category', 'merchant', 'countrycode', 'browserid', 'devid', 'click', 'datetime_day', 'datetime_hour', 'datetime_minute', 'merchant_count', 'merchant_num_0', 'merchant_num_1', 'merchant_click_rate', 'siteid_count', 'siteid_num_0', 'siteid_num_1', 'siteid_click_rate', 'offerid_count', 'offerid_num_0', 'offerid_num_1', 'offerid_click_rate', 'category_count', 'category_num_0', 'category_num_1', 'category_click_rate', 'countrycode_count', 'countrycode_num_0', 'countrycode_num_1', 'countrycode_click_rate', 'browserid_count', 'browserid_num_0', 'browserid_num_1', 'browserid_click_rate', 'devid_count', 'devid_num_0', 'devid_num_1', 'devid_click_rate', 'datetime_hour_count', 'datetime_hour_num_0', 'datetime_hour_num_1', 'datetime_hour_click_rate', 'datetime_day_count', 'datetime_day_num_0', 'datetime_day_num_1', 'datetime_day_click_rate', 'datetime_minute_count', 'datetime_minute_num_0', 'datetime_minute_num_1', 'datetime_minute_click_rate']
-'''
