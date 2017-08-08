@@ -19,6 +19,7 @@ train_spilt_train_processed = pre_path + 'inputData/train_train_processed'
 train_spilt_train_processed_10000 = pre_path + 'inputData/train_train_processed_10000'
 train_spilt_val_processed = pre_path + 'inputData/train_val_processed'
 test_processed = pre_path + 'inputData/test_processed'
+test_processed_id = pre_path + 'inputData/test_processed_id.csv'
 
 # dictionaries for mapping similar items
 browserid_map = {'Google Chrome':'Chrome',

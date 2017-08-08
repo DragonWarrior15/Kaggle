@@ -44,7 +44,7 @@ print (c_vars.header_useful)
 
 # df = pd.read_csv(c_vars.train_sample_file)
 # df = pd.read_csv(c_vars.train_split_train)
-def transformation_pipeline(df):
+def transformation_pipeline(df, preserve_id = False):
     df.fillna(c_vars.fillna_dict, inplace = True)
 
     df['datetime'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"))
@@ -61,6 +61,7 @@ def transformation_pipeline(df):
         df.rename(columns = {'count':col+'_count', 'num_0':col+'_num_0', 
                              'num_1':col+'_num_1', 'click_rate':col+'_click_rate'}, 
                   inplace = True)
+        # print(df['ID'].head(n = 20))
 
         # print (df.columns.tolist())
 
@@ -83,6 +84,9 @@ def transformation_pipeline(df):
         print (col, np.sum(df[col].isnull()), df[col].dtype)
     
     X = df[c_vars.header_useful].as_matrix()
+    if preserve_id == True:
+        df['ID'].to_csv(c_vars.test_processed_id, index = False, header = True)
+        print (len(df['ID']))
     del df
     print (str(datetime.now()) + ' Label Encoding Started')
     for i in range(len(label_encoder)):
@@ -123,6 +127,6 @@ with open(c_vars.train_spilt_val_processed, 'wb') as f:
 
 # submit set
 df_submit = pd.read_csv(c_vars.test_file)
-X_submit = transformation_pipeline(df_submit)
+X_submit = transformation_pipeline(df_submit, True)
 with open(c_vars.test_processed, 'wb') as f:
     pickle.dump(X_submit, f)

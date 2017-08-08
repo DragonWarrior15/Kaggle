@@ -69,14 +69,20 @@ with open('../analysis_graphs/rf_2', 'wb') as f:
 
 with open('../analysis_graphs/rf_2', 'rb') as f:
     model_list = pickle.load(f)
-
+'''
+for i in range(len(model_list)):
+    print (model_list[i].classes_)
+    print (model_list[i].n_classes_ )
+'''
 print (str(datetime.now()) + ' Reading submit set')
-df_submit = pd.read_csv(c_vars.test_file, usecols = ['ID'])
+# df_id = pd.read_csv(c_vars.test_processed_id, usecols = ['ID'])
+df_id = pd.read_csv(c_vars.test_processed_id)
 with open(c_vars.test_processed, 'rb') as f:
   X_submit = pickle.load(f)
 print (str(datetime.now()) + ' Predicting on submit set')
-y_submit_pred_proba_1 = np.sum([0.25 * model_list[i].predict_proba(X_submit)[:,1] for i in range(4)], axis = 0)
-df_submit['click'] = y_submit_pred_proba_1
+# y_submit_pred_proba_1 = np.sum([0.25 * model_list[i].predict_proba(X_submit)[:,1] for i in range(4)], axis = 0)
+y_submit_pred_proba_1 = model_list[3].predict_proba(X_submit)[:,1]
+df_id['click'] = y_submit_pred_proba_1
 
-df_submit[['ID', 'click']].to_csv('../output/submit_' + datetime.now().strftime("%Y%m%d_%H%M%S") + '.csv', index = False)
+df_id[['ID', 'click']].to_csv('../output/submit_' + datetime.now().strftime("%Y%m%d_%H%M%S") + '.csv', index = False)
 print (str(datetime.now()) + ' Done')
