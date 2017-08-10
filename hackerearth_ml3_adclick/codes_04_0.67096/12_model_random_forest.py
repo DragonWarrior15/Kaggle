@@ -14,18 +14,24 @@ import sklearn.metrics as skmetrics
 # train_columns = [i for i in range(69)]
 train_columns = [i for i in range(33)]
 # train_columns = [64,56,23,67,48,44,59,28,60,52,62,63,16,27,51]
+# train_columns = [64,56,67,44,59,28,62,16,51]
+# train_columns = [64,60,24,28,68,23,27,56,44,22,52,21,48,26,25,47,45,46,12,9,10,11]
+train_columns = [64,60,24,28,16,32,54,55,36,42,43,0,8,67,59,63,35,4,51,30,6,40,18,15,3]
 print (train_columns)
 
 print(str(datetime.now()) + ' Reading Data')
 with open(c_vars.train_spilt_train_processed, 'rb') as f:
     X, y = pickle.load(f)
 
-for i in range(X.shape[1] - 1):
-    for j in range(i + 1, X.shape[1]):
-        # print (str(i) + ',' + str(j) + ',' + str(X.shape[0]))
-        print (str(i) + ',' + str(j) + ',' + str(pearsonr(X[:,i], X[:,j])))
+# for i in range(X.shape[1] - 1):
+    # for j in range(i + 1, X.shape[1]):
+        # print (str(i) + ',' + str(j) + ',' + str(pearsonr(X[:,i], X[:,j])))
 
-'''
+# for i in range(X.shape[1]):
+    # print (str(i) + ',' + str(pearsonr(X[:,i], y)))
+
+
+
 print (X.shape, y.shape)
 
 with open(c_vars.train_spilt_val_processed, 'rb') as f:
@@ -42,7 +48,7 @@ model_list = []
 
 param_space, param_to_int_dict = c_vars.get_param_space(param_dict)
 # param_space = [[5, 2, 5, 120]]
-param_space = [[4, 10, 10, 10]]
+param_space = [[3, 10, 10, 10]]
 for param_list in param_space:
     # train_columns = c_vars.col_index_training[:c_vars.num_features_for_model]
     # train_columns = [x for x in range(X.shape[1])]
@@ -90,14 +96,15 @@ for param_list in param_space:
         # print (clf.feature_importances_)
         kf_index += 1
 
-with open('../analysis_graphs/rf_20170809_1800', 'wb') as f:
+with open('../analysis_graphs/rf_20170810_0110', 'wb') as f:
     pickle.dump(model_list, f)
 
 # rf_20170809_1212 0.63508 LB
 # rf_20170809_1622 0.67025 LB, only using first 15 columns of train
 # rf_20170809_1800 0.64919 LB, only using first 33 columns of train
-
-with open('../analysis_graphs/rf_20170809_1800', 'rb') as f:
+# lr_20170809_1622 0.67096 LB, using [64, 60, 24, 28, 68, 23, 27, 56, 44, 22, 52, 21, 48, 26, 25, 47, 45, 46, 12, 9, 10, 11] of train
+'''
+with open('../analysis_graphs/rf_20170810_0110', 'rb') as f:
     model_list = pickle.load(f)
 
 
