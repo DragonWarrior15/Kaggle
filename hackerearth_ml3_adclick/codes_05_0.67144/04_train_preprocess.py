@@ -36,17 +36,13 @@ df.fillna(c_vars.fillna_dict, inplace = True)
 df['datetime'] = df['datetime'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"))
 df['datetime_day'] = df['datetime'].apply(lambda x: x.day%7)
 df['datetime_hour'] = df['datetime'].apply(lambda x: x.hour)
+df['datetime_hour_map'] = df['datetime_hour'].apply(lambda x: c_vars.hour_mapping[x])
 df = df.drop('datetime', axis=1)
 
 for col in ['merchant', 'siteid', 'offerid', 'category']:
     df[col] = df[col].astype(np.int64)
 # df.loc[:, 'browserid'] = df['browserid'].apply(lambda x: x if x not in c_vars.browserid_map 
                                                            # else c_vars.browserid_map[x])
-
-threshold_dict = {'merchant':0.99, 'siteid':0.8, 'offerid':0.8, 'category':0.99,
-                  'countrycode_merchant':0.99, 'countrycode_siteid':0.8, 'countrycode_offerid':0.8, 'countrycode_category':0.99,
-                  'siteid_merchant':0.99, 'siteid_offerid':0.8, 'siteid_category':0.99
-                  }
 
 # merchant, siteid, offerid, category
 df_feature = {}
@@ -64,8 +60,8 @@ for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browser
     df_temp['cumul_sum'] = np.cumsum(df_temp['count'])
 
     if col in ['merchant', 'siteid', 'offerid', 'category']:
-        df_temp_2 = df_temp.loc[df_temp['cumul_sum'] > threshold_dict[col] * len(df), :]
-        df_temp = df_temp.loc[~(df_temp['cumul_sum'] > threshold_dict[col] * len(df)), :]
+        df_temp_2 = df_temp.loc[df_temp['cumul_sum'] > c_vars.threshold_dict[col] * len(df), :]
+        df_temp = df_temp.loc[~(df_temp['cumul_sum'] > c_vars.threshold_dict[col] * len(df)), :]
         df_temp = df_temp.append({col:-99999, 
                                   'count':np.sum(df_temp_2['count']), 
                                   'num_0':np.sum(df_temp_2['num_0']),
@@ -85,7 +81,7 @@ for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browser
             df[col + '_' + field].fillna(df_feature[col].loc[df_temp[col] == -99999, field].values[0], inplace = True)
     # print (df.columns.values)
 
-for col1, col2 in [['countrycode', x] for x in ['merchant', 'siteid', 'offerid', 'category']] +\
+for col1, col2 in [['countrycode', x] for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map']] +\
                   [['siteid', x] for x in ['merchant', 'offerid', 'category']]:
     col = col1 + '_' + col2
     df_temp = df[[col1, col2, 'click']]
@@ -99,13 +95,14 @@ for col1, col2 in [['countrycode', x] for x in ['merchant', 'siteid', 'offerid',
     df_temp.sort_values('count', inplace = True, axis = 0, ascending = False)
     df_temp['cumul_sum'] = np.cumsum(df_temp['count'])
 
-    df_temp_2 = df_temp.loc[df_temp['cumul_sum'] > threshold_dict[col] * len(df), :]
-    df_temp = df_temp.loc[~(df_temp['cumul_sum'] > threshold_dict[col] * len(df)), :]
-    df_temp = df_temp.append({col1:-999999, col2:-999999, 
-                              'count':np.sum(df_temp_2['count']), 
-                              'num_0':np.sum(df_temp_2['num_0']),
-                              'num_1':np.sum(df_temp_2['num_1'])},
-                             ignore_index = True)
+    if col in c_vars.threshold_dict:
+        df_temp_2 = df_temp.loc[df_temp['cumul_sum'] > c_vars.threshold_dict[col] * len(df), :]
+        df_temp = df_temp.loc[~(df_temp['cumul_sum'] > c_vars.threshold_dict[col] * len(df)), :]
+        df_temp = df_temp.append({col1:-999999, col2:-999999, 
+                                  'count':np.sum(df_temp_2['count']), 
+                                  'num_0':np.sum(df_temp_2['num_0']),
+                                  'num_1':np.sum(df_temp_2['num_1'])},
+                                 ignore_index = True)
 
     df_temp['click_rate'] = df_temp['num_1']/df_temp['count']
     df_temp.drop(['cumul_sum'], inplace = True, axis = 1)
@@ -116,9 +113,10 @@ for col1, col2 in [['countrycode', x] for x in ['merchant', 'siteid', 'offerid',
                          'num_1':col+'_num_1', 'click_rate':col+'_click_rate'}, 
               inplace = True)
 
-    for field in ['count', 'num_0', 'num_1', 'click_rate']:
-        df[col + '_' + field].fillna(df_feature[col].loc[(df_temp[col1] == -999999) & (df_temp[col2] == -999999),
-                                     field].values[0], inplace = True)
+    if col in c_vars.threshold_dict:
+        for field in ['count', 'num_0', 'num_1', 'click_rate']:
+            df[col + '_' + field].fillna(df_feature[col].loc[(df_temp[col1] == -999999) & (df_temp[col2] == -999999),
+                                         field].values[0], inplace = True)
 
     # print (df)
 # print (df)
@@ -135,7 +133,7 @@ c_vars.header_useful.append('datetime_day')
 c_vars.header_useful.append('datetime_hour')
 
 for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day'] +\
-           ['countrycode_' + str(x) for x in ['merchant', 'siteid', 'offerid', 'category']] +\
+           ['countrycode_' + str(x) for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map']] +\
            ['siteid_' + str(x) for x in ['merchant', 'offerid', 'category']]:
     for field in ['count', 'num_0', 'num_1', 'click_rate']:
         c_vars.header_useful.append(col + '_' + field)

@@ -29,7 +29,25 @@ browserid_map = {'Google Chrome':'Chrome',
 fillna_dict = {'datetime':'-999', 'siteid':-999, 'offerid':-999, 'category':-999, 'merchant':-999,
                'countrycode':'-999', 'browserid':'-999', 'devid':'-999', 'click':0}
 
-threshold_dict = {'merchant':0.99, 'siteid':0.8, 'offerid':0.8, 'category':0.99}
+threshold_dict = {'merchant':0.99, 'siteid':0.8, 'offerid':0.8, 'category':0.99,
+                  'countrycode_merchant':0.99, 'countrycode_siteid':0.8, 'countrycode_offerid':0.8, 'countrycode_category':0.99,
+                  'siteid_merchant':0.99, 'siteid_offerid':0.8, 'siteid_category':0.99
+                  }
+
+hour_mapping = {}
+for i in range(24):
+    if i == 18 or i == 19:
+        hour_mapping[i] = '18-19'
+    if 12 <= i and i <= 17:
+        hour_mapping[i] = '12-17'
+    if 7 <= i and i <= 11:
+        hour_mapping[i] = '7-11'
+    if i == 3:
+        hour_mapping[i] = '3'
+    if 4 <= i and i <= 6:
+        hour_mapping[i] = '4-6'
+    else:
+        hour_mapping[i] = '20-2'
 
 # col_index_training = [13, 19, 14, 24, 18, 20, 12, 26, 11]
 col_index_training = [18,11,24,7,17,10,19,31,5,6,4,23,29,16,25,30,21,20,60,9,28,59,8,3,61,55,22,56,54,52,15,38,62,58,2,53,51,27,26,39,0,37,50,36,1,35,49,14,12,48,47,32,13,57,33,40,34,45,46,41,43,42,44]
