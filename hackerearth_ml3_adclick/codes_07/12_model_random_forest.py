@@ -16,8 +16,8 @@ import sklearn.metrics as skmetrics
 # train_columns = [i for i in range(109)]
 # train_columns = [0]
 # train_columns = [103,104,88,76,107,24,99,27,22,108,81,44,2,33,17]
-# train_columns = [76,80,92,96,24,95,72,68,28,36]
-train_columns = [76,80,92,96,24,95,72,68,28]
+train_columns = [76,80,92,96,24,95,72,68,28,36]
+# train_columns = [76,80,92,96,24,95,72,68,28]
 # train_columns = [76,80,92,96,24,23,95,72,68,28,71,27,67,88,75,52,64,36]
 
 # train_columns = [67,64,52,72,71,68,15,48,44,63,56,66,27,51,25,1,28,21,16,26]

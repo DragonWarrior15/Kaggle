@@ -17,3 +17,4 @@
 # gbc_20170809_1157 0.67532 LB, [76,80,92,96,24,95,72,68,28,36], after doubling train size, 50 trees 
 # rf_20170811_1216 0.66390 LB, [76,80,92,96,24,23,95,72,68,28,71,27,67,88,75,52,64,36], after doubling train size, n_trees 50
 # lr_20170811_0952 0.67237 LB, [76,92,24,95,68,28,27,67,16], after doubling train size
+# mlp_20170811_1624 0.67559 LB, [76,80,92,96,24,95,72,68,28,36], after doubling train size, ['logistic', (25, 10), 'invscaling', 200, 'adam']

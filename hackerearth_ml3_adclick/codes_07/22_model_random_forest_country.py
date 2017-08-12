@@ -15,6 +15,10 @@ import sklearn.metrics as skmetrics
 
 from sklearn.ensemble import RandomForestClassifier
 
+# train_columns = [76,80,92,96,24,95,72,68,28,36]
+train_columns = [[76,52,104,72,68,71,28,27,67,64],
+                 [76,72,68,28,71,27,67,80,75,92]]
+
 np.random.seed(42)
 
 with open('../analysis_graphs/label_encoder', 'rb') as f:
@@ -84,11 +88,9 @@ model_list = []
 param_space, param_to_int_dict = c_vars.get_param_space(param_dict)
 # print (param_space)
 # print (param_to_int_dict)
-param_space = [[4, 10, 10, 10]]
+param_space = [[4, 10, 10, 50]]
 # param_list = [0.05, 5, 200]
 for param_list in param_space:
-    # train_columns = c_vars.col_index_training[:c_vars.num_features_for_model]
-    train_columns = [x for x in range(X[0].shape[1])]
     print(str(datetime.now()) + ' Training Random Forest classifier, ' + str(param_list))
     kf = [KFold(n_splits = 4, shuffle = True) for _ in range(n_models)]
     clf = [0 for _ in range(n_models)]
@@ -107,8 +109,8 @@ for param_list in param_space:
     for [train_indices_1, test_indices_1], [train_indices_2, test_indices_2] in zip(kf[0].split(X[0]), kf[1].split(X[1])):
         X_train_1, X_test_1 = X[0][train_indices_1], X[0][test_indices_1]
         X_train_2, X_test_2 = X[1][train_indices_2], X[1][test_indices_2]
-        X_train_1, X_test_1 = X_train_1[:, train_columns], X_test_1[:, train_columns]
-        X_train_2, X_test_2 = X_train_2[:, train_columns], X_test_2[:, train_columns]
+        X_train_1, X_test_1 = X_train_1[:, train_columns[0]], X_test_1[:, train_columns[0]]
+        X_train_2, X_test_2 = X_train_2[:, train_columns[1]], X_test_2[:, train_columns[1]]
         y_train_1, y_test_1 = y[0][train_indices_1], y[0][test_indices_1]
         y_train_2, y_test_2 = y[1][train_indices_2], y[1][test_indices_2]
 
@@ -118,7 +120,8 @@ for param_list in param_space:
         model_list.append(clf[1])
         print (str(datetime.now()) + ' Model Training Complete')
 
-        for myX_1, myX_2, myY_1, myY_2, Set_1, Set_2 in zip([X_train_1, X_test_1, X_unseen[0]], [X_train_2, X_test_2, X_unseen[1]],
+        for myX_1, myX_2, myY_1, myY_2, Set_1, Set_2 in zip([X_train_1, X_test_1, X_unseen[0][:,train_columns[0]]], 
+                                                            [X_train_2, X_test_2, X_unseen[1][:,train_columns[1]]],
                                  [y_train_1, y_test_1, y_unseen[0]], [y_train_2, y_test_2, y_unseen[1]],
                                  ['Train1', 'Test1', 'Unseen1'], ['Train2', 'Test2', 'Unseen2']):
             y_pred_1 = clf[0].predict(myX_1)

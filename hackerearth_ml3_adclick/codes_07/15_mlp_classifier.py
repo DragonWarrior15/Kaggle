@@ -13,7 +13,7 @@ from sklearn.feature_selection import chi2
 from sklearn.model_selection import KFold, cross_val_score
 import sklearn.metrics as skmetrics
 
-from xgboost.sklearn import XGBClassifier
+from sklearn.neural_network import MLPClassifier
 
 # np.random.seed(42)
 # train_columns = [i for i in range(73)]
@@ -24,7 +24,6 @@ train_columns = [76,80,92,96,24,95,72,68,28,36]
 # train_columns = [64,56,23,67,48,44,59,28,60,52,62,63,16,27,51]
 # train_columns = [64,56,67,44,59,28,62,16,51]
 # train_columns = [64,60,24,28,68,23,27,56,44,22,52,21,48,26,25,47,45,46,12,9,10,11]
-# train_columns = [44,28,52,36,68,22,55,26,48]
 print (train_columns)
 
 print(str(datetime.now()) + ' Reading Data')
@@ -41,14 +40,11 @@ print(str(datetime.now()) + ' Reading Data Complete')
 #               'n_estimators' : [50, 100, 200]}
 
 param_dict = {
-              'colsample_bytree' : [0.6, 0.8],
-              'learning_rate' : [0.01, 0.025, 0.5],
-              'max_depth' : [3, 5],
-              'min_child_weight' : [1, 3, 5],
-              'n_estimators' : [10, 25],
-              'reg_alpha' : [0],
-              'reg_lambda' : [10],
-              'subsample' : [0.8, 1]
+              'activation' : ['logistic'],
+              'hidden_layer_sizes' : [(20, 15, 10, 5)],
+              'learning_rate' : ['invscaling'],
+              'max_iter' : [200],
+              'solver' : ['adam']
               }
 
 model_list = []
@@ -56,20 +52,18 @@ model_list = []
 param_space, param_to_int_dict = c_vars.get_param_space(param_dict)
 # print (param_space)
 # print (param_to_int_dict)
-param_space = [[0.6, 0.05, 3, 1, 25, 0, 10, 0.8]]
-# param_list = [0.05, 5, 200]
+# param_space = [[1, 3, 20]]
+# param_space = [[1, 3, 20]]
 for param_list in param_space:
-    print(str(datetime.now()) + ' Training XGBoost classifier, ' + str(param_list))
+    print(str(datetime.now()) + ' Training MLP classifier, ' + str(param_list))
     kf = KFold(n_splits = 4, shuffle = True)
-    clf = XGBClassifier(
-                        colsample_bytree      = param_list[param_to_int_dict['colsample_bytree']],
-                        learning_rate         = param_list[param_to_int_dict['learning_rate']],
-                        max_depth             = param_list[param_to_int_dict['max_depth']],
-                        min_child_weight      = param_list[param_to_int_dict['min_child_weight']],
-                        n_estimators          = param_list[param_to_int_dict['n_estimators']],
-                        reg_alpha             = param_list[param_to_int_dict['reg_alpha']],
-                        reg_lambda            = param_list[param_to_int_dict['reg_lambda']],
-                        subsample             = param_list[param_to_int_dict['subsample']],
+    clf = MLPClassifier(
+                        activation         = param_list[param_to_int_dict['activation']],
+                        hidden_layer_sizes = param_list[param_to_int_dict['hidden_layer_sizes']],
+                        learning_rate      = param_list[param_to_int_dict['learning_rate']],
+                        max_iter           = param_list[param_to_int_dict['max_iter']],
+                        solver             = param_list[param_to_int_dict['solver']],
+                        random_state = 42
                         )
     kf_index = 0
     for train_indices, test_indices in kf.split(X):
@@ -81,7 +75,7 @@ for param_list in param_space:
         model_list.append(clf)
         print (str(datetime.now()) + ' Model Training Complete')
 
-        for myX, myY, Set in zip([X_train, X_test, X_unseen], [y_train, y_test, y_unseen], ['Train', 'Test', 'Unseen']):
+        for myX, myY, Set in zip([X_train, X_test, X_unseen[:, train_columns]], [y_train, y_test, y_unseen], ['Train', 'Test', 'Unseen']):
             y_pred = clf.predict(myX)
             y_pred_proba = clf.predict_proba(myX)
 
@@ -92,16 +86,17 @@ for param_list in param_space:
         # print (clf.feature_importances_)
         kf_index += 1
 
-with open('../analysis_graphs/xgb_20170809_1157', 'wb') as f:
+with open('../analysis_graphs/mlp_20170813_0056', 'wb') as f:
     pickle.dump(model_list, f)
 
 # rf_20170809_1212 0.63508 LB
 # rf_20170809_1622 0.67025 LB, only using first 15 columns of train
 # rf_20170809_1800 0.64919 LB, only using first 33 columns of train
 # lr_20170809_1622 0.67096 LB, using [64, 60, 24, 28, 68, 23, 27, 56, 44, 22, 52, 21, 48, 26, 25, 47, 45, 46, 12, 9, 10, 11] of train
-# xgb_20170809_1157 0.59261 LB, using [64,56,23,67,48,44,59,28,60,52,62,63,16,27,51]
+# xgb_20170809_1157 0.59261 LB, [64,56,23,67,48,44,59,28,60,52,62,63,16,27,51]
+# gbc_20170809_1157 0.67532 LB, [76,80,92,96,24,95,72,68,28,36], after doubling train size, 50 trees 
 '''
-with open('../analysis_graphs/xgb_20170809_1157', 'rb') as f:
+with open('../analysis_graphs/mlp_20170813_0056', 'rb') as f:
     model_list = pickle.load(f)
 
 
