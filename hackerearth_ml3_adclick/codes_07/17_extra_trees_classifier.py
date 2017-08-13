@@ -6,7 +6,7 @@ from scipy import sparse
 from scipy.stats import pearsonr
 import pickle
 
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.model_selection import KFold, cross_val_score
 import sklearn.metrics as skmetrics
 
@@ -16,12 +16,12 @@ import sklearn.metrics as skmetrics
 # train_columns = [i for i in range(109)]
 # train_columns = [0]
 # train_columns = [103,104,88,76,107,24,99,27,22,108,81,44,2,33,17]
-train_columns = [76,80,92,96,24,95,72,68,28,36]
+# train_columns = [76,80,92,96,24,95,72,68,28,36]
 # train_columns = [76,80,92,96,24,95,72,68,28]
 # train_columns = [76,80,92,96,24,23,95,72,68,28,71,27,67,88,75,52,64,36]
 
-train_columns = [89,88,117,85,93,105,109,25,108,81,77,29,37]
-train_columns = [89,117,85,73,93,105,113,25,81]
+# train_columns = [89,88,117,85,93,105,109,25,108,81,77,29,37]
+# train_columns = [89,117,85,73,93,105,113,25,81]
 train_columns = [85,93,105,109,25,108,81,77,29,37]
 train_columns = [i for i in range(130)]
 
@@ -33,9 +33,9 @@ train_columns = [i for i in range(130)]
 # train_columns = [64,60,24,28,16,32,54,55,36,42,43,0,8,67,59,63,35,4,51,30,6,40,18,15,3]
 print (train_columns)
 
-model = 'rf_20170813_1800' # [85,93,105,109,25,108,81,77,29,37]
-model = 'rf_20170813_1830' # [i for i in range(130)]
-print (model)
+model_name = 'et_20170813_1800' # [85,93,105,109,25,108,81,77,29,37]
+model_name = 'et_20170813_1830' # [i for i in range(130)]
+print (model_name)
 
 print(str(datetime.now()) + ' Reading Data')
 with open(c_vars.train_spilt_train_processed, 'rb') as f:
@@ -58,15 +58,14 @@ with open(c_vars.train_spilt_val_processed, 'rb') as f:
 print(str(datetime.now()) + ' Reading Data Complete')
 
 param_dict = {'max_depth' : [5, 18, 15],
-              'n_estimators' : [120, 300, 500],
-              'min_samples_split' : [2, 5, 10],
-              'min_samples_leaf' : [1, 2, 5, 10]}
+              'n_estimators' : [120, 300, 500]
+              }
 
 model_list = []
 
 param_space, param_to_int_dict = c_vars.get_param_space(param_dict)
 # param_space = [[5, 2, 5, 120]]
-param_space = [[4, 10, 10, 50]]
+param_space = [[4, 50]]
 for param_list in param_space:
     # train_columns = c_vars.col_index_training[:c_vars.num_features_for_model]
     # train_columns = [x for x in range(X.shape[1])]
@@ -80,10 +79,8 @@ for param_list in param_space:
 
         # print (len(X_train), len(X_test), np.sum(y_train), np.sum(y_test))
        
-        clf = RandomForestClassifier(max_depth=param_list[param_to_int_dict['max_depth']], 
+        clf = ExtraTreesClassifier(max_depth=param_list[param_to_int_dict['max_depth']], 
                                      n_estimators=param_list[param_to_int_dict['n_estimators']],
-                                     min_samples_split=param_list[param_to_int_dict['min_samples_split']],
-                                     min_samples_leaf=param_list[param_to_int_dict['min_samples_leaf']],
                                      random_state = 42)
 
         clf.fit(X_train, y_train)
@@ -116,7 +113,7 @@ for param_list in param_space:
         print (clf.feature_importances_)
         kf_index += 1
 
-with open('../analysis_graphs/' + str(model), 'wb') as f:
+with open('../analysis_graphs/' + str(model_name), 'wb') as f:
     pickle.dump(model_list, f)
 
 # rf_20170809_1212 0.63508 LB
@@ -128,7 +125,7 @@ with open('../analysis_graphs/' + str(model), 'wb') as f:
 # rf_20170811_1154 0.67606 LB, [76,80,92,96,24,95,72,68,28,36], after doubling train size, n_trees 100
 # rf_20170811_1216 0.66390 LB, [76,80,92,96,24,23,95,72,68,28,71,27,67,88,75,52,64,36], after doubling train size, n_trees 50
 '''
-with open('../analysis_graphs/' + str(model), 'rb') as f:
+with open('../analysis_graphs/' + str(model_name), 'rb') as f:
     model_list = pickle.load(f)
 
 

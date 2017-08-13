@@ -32,14 +32,15 @@ for col in ['datetime', 'click', 'merchant', 'siteid', 'offerid', 'category']:
 # for col in ['datetime', 'click']:
     c_vars.header_useful.remove(col)
 
+c_vars.header_useful.append('datetime_hour_map')
 c_vars.header_useful.append('datetime_day')
 c_vars.header_useful.append('datetime_hour')
 
-for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day'] +\
+for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_hour_map'] +\
            ['category_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-           ['devid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-           ['browserid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-           ['countrycode_' + str(x) for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map']] +\
+           ['devid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
+           ['browserid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
+           ['countrycode_' + str(x) for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
            ['siteid_' + str(x) for x in ['merchant', 'offerid', 'category']]:
     for field in ['count', 'num_0', 'num_1', 'click_rate']:
         c_vars.header_useful.append(col + '_' + field)
@@ -60,7 +61,7 @@ def transformation_pipeline(df, preserve_id = False):
     for col in ['merchant', 'siteid', 'offerid', 'category']:
         df[col] = df[col].astype(np.int64)
 
-    for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day']:
+    for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_hour_map']:
     # for col in ['merchant']:
         df = pd.merge(df, df_feature[col], how = 'left', on = col, suffixes = ('', ''))
         df.rename(columns = {'count':col+'_count', 'num_0':col+'_num_0', 
@@ -76,8 +77,8 @@ def transformation_pipeline(df, preserve_id = False):
 
     for col1, col2 in [['countrycode', x] for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
                       [['category', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-                      [['devid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-                      [['browserid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
+                      [['devid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
+                      [['browserid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
                       [['siteid', x] for x in ['merchant', 'offerid', 'category']]:
         col = col1 + '_' + col2
         df = pd.merge(df, df_feature[col], how = 'left', on = [col1, col2], suffixes = ('', ''))
@@ -119,7 +120,7 @@ def transformation_pipeline(df, preserve_id = False):
     # del X_ohe
     return (X)
 
-
+'''
 df = pd.read_csv(c_vars.train_split_train_sample)
 X = transformation_pipeline(df)
 y = df['click'].as_matrix()
@@ -129,19 +130,18 @@ print (X.shape, y.shape)
 # save the X and y prepared
 with open(c_vars.train_spilt_train_processed, 'wb') as f:
     pickle.dump([X, y], f)
-
 '''
+
 df = pd.read_csv(c_vars.train_split_val)
 X_unseen = transformation_pipeline(df)
 y_unseen = df['click'].as_matrix()
 # save the X and y prepared
 with open(c_vars.train_spilt_val_processed, 'wb') as f:
     pickle.dump([X_unseen, y_unseen], f)
-'''
-'''
+
+
 # submit set
 df_submit = pd.read_csv(c_vars.test_file)
 X_submit = transformation_pipeline(df_submit, True)
 with open(c_vars.test_processed, 'wb') as f:
     pickle.dump(X_submit, f)
-'''

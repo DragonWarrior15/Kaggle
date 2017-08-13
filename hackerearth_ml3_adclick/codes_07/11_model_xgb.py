@@ -21,11 +21,18 @@ from xgboost.sklearn import XGBClassifier
 # train_columns = [i for i in range(109)]
 train_columns = [76,80,92,96,24,95,72,68,28,36]
 
+train_columns = [85,93,105,109,25,108,81,77,29,37]
+train_columns = [i for i in range(130)]
+
 # train_columns = [64,56,23,67,48,44,59,28,60,52,62,63,16,27,51]
 # train_columns = [64,56,67,44,59,28,62,16,51]
 # train_columns = [64,60,24,28,68,23,27,56,44,22,52,21,48,26,25,47,45,46,12,9,10,11]
 # train_columns = [44,28,52,36,68,22,55,26,48]
 print (train_columns)
+
+model_name = 'xgb_20170813_1800' # [85,93,105,109,25,108,81,77,29,37]
+model_name = 'xgb_20170813_1830' # [i for i in range(130)]
+print (model_name)
 
 print(str(datetime.now()) + ' Reading Data')
 with open(c_vars.train_spilt_train_processed, 'rb') as f:
@@ -92,7 +99,7 @@ for param_list in param_space:
         # print (clf.feature_importances_)
         kf_index += 1
 
-with open('../analysis_graphs/xgb_20170809_1157', 'wb') as f:
+with open('../analysis_graphs/' + str(model_name), 'wb') as f:
     pickle.dump(model_list, f)
 
 # rf_20170809_1212 0.63508 LB
@@ -101,7 +108,7 @@ with open('../analysis_graphs/xgb_20170809_1157', 'wb') as f:
 # lr_20170809_1622 0.67096 LB, using [64, 60, 24, 28, 68, 23, 27, 56, 44, 22, 52, 21, 48, 26, 25, 47, 45, 46, 12, 9, 10, 11] of train
 # xgb_20170809_1157 0.59261 LB, using [64,56,23,67,48,44,59,28,60,52,62,63,16,27,51]
 '''
-with open('../analysis_graphs/xgb_20170809_1157', 'rb') as f:
+with open('../analysis_graphs/' + str(model_name), 'rb') as f:
     model_list = pickle.load(f)
 
 

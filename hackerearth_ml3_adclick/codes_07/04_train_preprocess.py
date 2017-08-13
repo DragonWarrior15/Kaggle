@@ -46,7 +46,7 @@ for col in ['merchant', 'siteid', 'offerid', 'category']:
 
 # merchant, siteid, offerid, category
 df_feature = {}
-for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day']:
+for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_hour_map']:
 # for col in ['merchant']:
     df_temp = df[[col, 'click']]
     df_temp = df_temp.groupby([col]).agg(['count', np.sum])
@@ -83,8 +83,8 @@ for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browser
 
 for col1, col2 in [['countrycode', x] for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
                   [['category', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-                  [['devid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-                  [['browserid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
+                  [['devid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
+                  [['browserid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
                   [['siteid', x] for x in ['merchant', 'offerid', 'category']]:
     col = col1 + '_' + col2
     df_temp = df[[col1, col2, 'click']]
@@ -108,8 +108,8 @@ for col1, col2 in [['countrycode', x] for x in ['merchant', 'siteid', 'offerid',
                                  ignore_index = True)
    
     if [col1, col2] in [['category', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-                       [['devid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-                       [['browserid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']]:
+                       [['devid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
+                       [['browserid', x] for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']]:
         df_temp = df_temp.append({col1:-999999, col2:-999999, 
                                   'count':np.mean(df_temp['count']), 
                                   'num_0':np.mean(df_temp['num_0']),
@@ -141,14 +141,15 @@ for col in ['datetime', 'click', 'merchant', 'siteid', 'offerid', 'category']:
 # for col in ['datetime', 'click']:
     c_vars.header_useful.remove(col)
 
+c_vars.header_useful.append('datetime_hour_map')
 c_vars.header_useful.append('datetime_day')
 c_vars.header_useful.append('datetime_hour')
 
-for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day'] +\
+for col in ['merchant', 'siteid', 'offerid', 'category', 'countrycode', 'browserid', 'devid', 'datetime_hour', 'datetime_day', 'datetime_hour_map'] +\
            ['category_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-           ['devid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-           ['browserid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
-           ['countrycode_' + str(x) for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map']] +\
+           ['devid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
+           ['browserid_' + str(x) for x in ['datetime_hour_map', 'datetime_day', 'datetime_hour', 'countrycode']] +\
+           ['countrycode_' + str(x) for x in ['merchant', 'siteid', 'offerid', 'category', 'datetime_hour_map', 'datetime_day', 'datetime_hour']] +\
            ['siteid_' + str(x) for x in ['merchant', 'offerid', 'category']]:
     for field in ['count', 'num_0', 'num_1', 'click_rate']:
         # print (col, field)
@@ -165,8 +166,8 @@ X = df[c_vars.header_useful].as_matrix()
 y = df['click'].as_matrix()
 
 print (str(datetime.now()) + ' Label Encoding Started')
-# label_encoder = [LabelEncoder() for _ in range(3)]
-label_encoder = [LabelEncoder() for _ in range(9)]
+label_encoder = [LabelEncoder() for _ in range(4)]
+# label_encoder = [LabelEncoder() for _ in range(9)]
 for i in range(len(label_encoder)):
     label_encoder[i].fit(X[:,i])
     # print (i, c_vars.header_useful[i], label_encoder[i].get_params(deep=True))

@@ -19,6 +19,10 @@ import sklearn.metrics as skmetrics
 train_columns = [76,92,24,95,68,28,27,67,16]
 train_columns = [76,80,92,96,24,95,72,68,28,36]
 
+train_columns = [89,85,93,105,109,25,108,81,77,29,37]
+train_columns = [89,117,73,81,101,116]
+train_columns = [85,93,105,109,25,108,81,77,29,37]
+
 # train_columns = [64,56,23,67,48,44,59,28,60,52,62,63,16,27,51]
 # train_columns = [64,60,24,28,68,23,27,56,44,22,52,21,48,26,25,47,45,46,12,9,10,11]
 # train_columns = [64,60,24,28,68,23,27,56,44,22,52]
@@ -27,6 +31,10 @@ train_columns = [76,80,92,96,24,95,72,68,28,36]
 # train_columns = [44,56,60,24,23,59,28,27,52,36,68,22,21,58,16,55,26,57,25,48]
 # train_columns = [44,28,52,36,68,22,55,26,48]#,43,64,12,34,32,54,8,0,42,1,20,2,69,62,4,51,35,39,18,6,3,67,14]
 print (train_columns)
+
+model = 'lr_20170813_1800' # [89,117,73,81,101,116]
+model = 'lr_20170813_1830' # [85,93,105,109,25,108,81,77,29,37]
+print (model)
 
 print(str(datetime.now()) + ' Reading Data')
 with open(c_vars.train_spilt_train_processed, 'rb') as f:
@@ -92,7 +100,7 @@ for param_list in param_space:
         # print (clf.coef_)
         kf_index += 1
 
-with open('../analysis_graphs/lr_20170811_1025', 'wb') as f:
+with open('../analysis_graphs/' + str(model), 'wb') as f:
     pickle.dump(model_list, f)
 
 # rf_20170809_1212 0.63508 LB

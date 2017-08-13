@@ -25,7 +25,7 @@ df_train_1 = df_train.loc[df_train['click'] == 1, :]
 df_train_0 = df_train.loc[df_train['click'] == 0, :]
 df_train_0.to_csv(c_vars.train_split_train_0, index = False)
 
-pd.concat([df_train_0.sample(4 * len(df_train_1)), df_train_1, df_train_1, df_train_1, df_train_1]).to_csv(c_vars.train_split_train_sample, index = False)
+pd.concat([df_train_0.sample(2 * len(df_train_1)), df_train_1, df_train_1]).to_csv(c_vars.train_split_train_sample, index = False)
 
 '''
 # split the train set into a smaller file for feature selection
