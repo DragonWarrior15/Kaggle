@@ -10,10 +10,10 @@ pre_path = '../'
 train_file = pre_path + 'inputs/train.csv'
 test_file = pre_path + 'inputs/test.csv'
 
-train_split_train = pre_path + 'inputData/train_train.csv'
-train_split_train_sample = pre_path + 'inputData/train_train_sample.csv'
-train_split_val = pre_path + 'inputData/train_val.csv'
-train_split_train_0 = pre_path + 'inputData/train_train_0.csv'
+train_split_train = pre_path + 'inputs/train_train.csv'
+train_split_train_sample = pre_path + 'inputs/train_train_sample.csv'
+train_split_val = pre_path + 'inputs/train_val.csv'
+train_split_train_0 = pre_path + 'inputs/train_train_0.csv'
 
 browser_dict = {
     'Chrome'            : 'Chrome',
