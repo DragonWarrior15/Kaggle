@@ -11,10 +11,11 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
-import sys  
+import sys
+# from imp import reload
 
-reload(sys)  
-sys.setdefaultencoding('utf8')
+# reload(sys) 
+# sys.setdefaultencoding('utf8')
 row_ind = 0
 regex_stopwords = re.compile('[%s]' % re.escape(string.punctuation))
 porter = PorterStemmer()
@@ -31,7 +32,7 @@ def cleaning_function(x):
         print (str(row_ind) + ' ' + str(datetime.now()))
     row_ind += 1
     '''
-    x = unicode(x, errors='ignore')
+    # x = unicode(x, errors='ignore')
     x = x.lower()
     # print (x)
     x = word_tokenize(x)
@@ -57,30 +58,29 @@ def parallelize_dataframe(df, func):
     return df
 
 def parallel_func_to_apply(data):
-    data['Description'] = data['Description'].apply(lambda x: cleaning_function(x))
+    data['Description_Clean'] = data['Description'].apply(lambda x: cleaning_function(x))
     return (data)
 
 def main():
     df = pd.read_csv(c_vars.train_file)
-    # df = pd.read_csv(c_vars.train_file_processed)
+    # df = pd.read_csv(c_vars.train_file_processed, encoding = "ISO-8859-1")
     
     df.drop(['User_ID'], axis = 1, inplace = True)
     df['Is_Response'] = df['Is_Response'].apply(lambda x: 1 if x == 'happy' else 0)
     df['Browser_Used'] = df['Browser_Used'].apply(lambda x: c_vars.browser_dict[x])
 
-    print ('Cleaning started')
+    print ('Cleaning started at ' + str(datetime.now()))
     # df['Description'] = df['Description'].apply(lambda x: cleaning_function(x))
     df = parallelize_dataframe(df, parallel_func_to_apply)
-    print ('Cleaning complete')
-    
+    print ('Cleaning complete at ' + str(datetime.now()))
     df.to_csv(c_vars.train_file_processed, index = False)
     
-    df['text_length'] = df['Description'].apply(lambda x: len(x))
-    df['word_count'] = df['Description'].apply(lambda x: len(x.split(' ')))
+    df['text_length'] = df['Description_Clean'].apply(lambda x: len(x))
+    df['word_count'] = df['Description_Clean'].apply(lambda x: len(x.split(' ')))
 
     df_train, df_dev = train_test_split(df.as_matrix(), test_size = 0.2, random_state = 42)
-    df_train = pd.DataFrame(df_train, columns = c_vars.header_useful + ['text_length', 'word_count'])
-    df_dev = pd.DataFrame(df_dev, columns = c_vars.header_useful + ['text_length', 'word_count'])
+    df_train = pd.DataFrame(df_train, columns = c_vars.header_useful + ['text_length', 'word_count', 'Description_Clean'])
+    df_dev = pd.DataFrame(df_dev, columns = c_vars.header_useful + ['text_length', 'word_count', 'Description_Clean'])
 
     df_device = df_train.groupby(['Device_Used'])['Is_Response'].agg(['count', np.sum])
     df_device.reset_index(inplace = True)
@@ -92,8 +92,8 @@ def main():
     df_train = pd.merge(df_train, df_device, how = 'left', on = 'Device_Used', suffixes = ('', ''))
     df_dev = pd.merge(df_dev, df_device, how = 'left', on = 'Device_Used', suffixes = ('', ''))
 
-    X_train = df_train[['Description', 'text_length', 'word_count', 'target_rate']].as_matrix()
-    X_dev = df_dev[['Description', 'text_length', 'word_count', 'target_rate']].as_matrix()
+    X_train = df_train[['Description_Clean', 'text_length', 'word_count', 'target_rate']].as_matrix()
+    X_dev = df_dev[['Description_Clean', 'text_length', 'word_count', 'target_rate']].as_matrix()
     y_train = df_train['Is_Response'].as_matrix().astype(np.int64)
     y_dev = df_dev['Is_Response'].as_matrix().astype(np.int64)
 
@@ -122,17 +122,25 @@ def main():
 
     # print (X_train_tfidf)
 
-    from sklearn.naive_bayes import MultinomialNB
+    from sklearn.naive_bayes import MultinomialNB, GaussianNB
     from sklearn.svm import SVC
     from sklearn.metrics import roc_auc_score, accuracy_score
+    from sklearn.ensemble import RandomForestClassifier
 
-    for i in np.logspace(-3, 0, num = 0 + 3 + 1):
+    for i in [0.1]:
+    # for i in np.logspace(-3, 0, num = 0 + 3 + 1):
     # for i in np.logspace(0, 5, num = 0 + 5 + 1):
+        # clf = RandomForestClassifier(max_depth=10, n_estimators=20, min_samples_split=5, min_samples_leaf=5, random_state = 42)
         clf = MultinomialNB(alpha = i)
+        # clf = GaussianNB()
         # clf = SVC(C = i)
         clf.fit(X_train_tfidf, y_train)
         y_pred = clf.predict(X_dev_tfidf)
         print (str(i) + ',' + str(accuracy_score(y_dev, y_pred)) + ',' + str(roc_auc_score(y_dev, y_pred)))
+
+        df_dev['y_dev'] = y_dev
+        df_dev['y_pred'] = y_pred
+        df_dev.to_csv('../inputs/dev_analysis.csv')
 
     '''
     clf = MultinomialNB(alpha = 0.1)
