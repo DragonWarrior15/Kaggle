@@ -77,3 +77,146 @@ multinomialNB tfidf min_df = 5 ngram_range=(2,4) with cleaning wordnet, lower ca
 0.01   0.863875690253  0.819213125242
 0.1    0.865159881854  0.824263276229
 1.0    0.838705534866  0.762154892926
+
+
+multinomialNB tfidf min_df = 5 ngram_range=(2,4) with cleaning wordnet, lower case
+0.1,0.865159881854,0.824263276229
+bot_20
+part clean               0.095851
+also wall thin           0.102126
+standard practice        0.102408
+nt heard anything        0.102715
+small table two          0.106141
+could told               0.106394
+shine service            0.106534
+shoe shine service       0.106534
+small table two chair    0.107882
+business practice        0.108028
+nonalcoholic beverage    0.108354
+another staff            0.108506
+still around             0.108972
+kitchenette small        0.109341
+king bed asked           0.109760
+rather full              0.110837
+earlier would            0.110939
+issue cleanliness        0.112075
+lot walked               0.112085
+inn based                0.112267
+dtype: float64
+top_20
+accommodating friendly    1.000000
+also good                 1.000000
+beat location             1.000000
+de la                     1.000000
+great experience          1.000000
+horrible bed              1.000000
+hotel con                 1.000000
+mouse room                1.000000
+never leave               1.000000
+nt stay                   1.000000
+pleasant stay             1.000000
+price great               1.000000
+room small                1.000000
+south park                1.000000
+special mention           1.000000
+staff friendly            1.000000
+also towel                0.935692
+cold cereal               0.889269
+recommend definitely      0.877174
+care comfort              0.863104
+dtype: float64
+
+multinomialNB tfidf min_df = 5, ngram_range=(2,4) with cleaning wordnet, lower case
+0.1,0.857839989726,0.807189820518
+bot_20
+nodded          0.106599
+ml              0.118009
+hare            0.123911
+screening       0.125195
+remover         0.129561
+mountainside    0.133142
+pursue          0.138920
+religious       0.141872
+all             0.143073
+chaperone       0.143532
+radar           0.145330
+reiterated      0.145839
+relayed         0.145864
+relented        0.146574
+mocha           0.146707
+aggravated      0.147918
+handset         0.148118
+coloured        0.148401
+amazement       0.148707
+aback           0.149606
+dtype: float64
+top_20
+mouse           0.986492
+impeccable      0.911938
+thump           0.900890
+sucked          0.885883
+accomadating    0.870486
+average         0.853777
+diane           0.846344
+de              0.838267
+henry           0.826012
+immensely       0.820568
+jeffrey         0.816497
+graceland       0.815671
+great           0.814361
+stayin          0.812333
+pleasent        0.804723
+lil             0.794842
+peace           0.794549
+amenties        0.792253
+wyndham         0.788919
+adolphus        0.787742
+dtype: float64
+
+
+multinomialNB tfidf min_df = 3, ngram_range=(1,3) with cleaning wordnet, lower case
+0.1,0.874534480544,0.83706264884
+bot_20
+deep dark              0.053431
+traveler never         0.054889
+money instead          0.055052
+small writing          0.055439
+small writing desk     0.055439
+suite large living     0.056116
+problem every          0.056903
+keeping eye            0.056980
+spoke woman            0.058118
+check status room      0.058402
+item restocked         0.058457
+service menu looked    0.058537
+people away            0.058737
+time showering         0.058781
+completely separate    0.058831
+area serve             0.058865
+old post               0.059411
+old post office        0.059411
+friend join            0.060031
+everything tasted      0.060698
+dtype: float64
+top_20
+de                        0.816323
+barry                     0.802899
+mouse room                0.773402
+thump                     0.762040
+accommodating friendly    0.739082
+cracker                   0.697321
+horrible bed              0.690509
+infected                  0.666485
+nt stay                   0.658470
+value night               0.656170
+direction helpful         0.652989
+diane                     0.651059
+doll                      0.651001
+stayed day hotel          0.643564
+stayin                    0.627447
+mouse                     0.625353
+thing behind              0.618572
+location room great       0.618159
+beat location             0.618144
+great place stay          0.616362
+dtype: float64

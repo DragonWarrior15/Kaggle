@@ -12,12 +12,11 @@ from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 import sys
-# from imp import reload
 
-# reload(sys) 
-# sys.setdefaultencoding('utf8')
+reload(sys) 
+sys.setdefaultencoding('utf8')
 row_ind = 0
-regex_stopwords = re.compile('[%s]' % re.escape(string.punctuation))
+regex_punc = re.compile('[%s]' % re.escape(string.punctuation))
 porter = PorterStemmer()
 snowball = SnowballStemmer('english')
 wordnet = WordNetLemmatizer()
@@ -26,19 +25,19 @@ num_cores = 2 #number of cores on your machine
 
 def cleaning_function(x):
     # x is a piece of text to be cleaned
-    '''
+    
     global row_ind
     if (row_ind + 1) % 1000 == 0:
         print (str(row_ind) + ' ' + str(datetime.now()))
     row_ind += 1
-    '''
-    # x = unicode(x, errors='ignore')
+    
+    x = unicode(x, errors='ignore')
     x = x.lower()
     # print (x)
     x = word_tokenize(x)
     
-    # x = [regex_stopwords.sub(u'', token) for token in x if not regex_stopwords.sub(u'', token) == u'']
-    x = [regex_stopwords.sub(u'', token) for token in x]
+    # x = [regex_punc.sub(u'', token) for token in x if not regex_punc.sub(u'', token) == u'']
+    x = [regex_punc.sub(u'', token) for token in x]
     x = list(filter(lambda x: x != u'', x))
     # x = [token for token in x if token not in stopwords.words('english')]
     x = list(filter(lambda x: x not in stopwords.words('english'), x))
@@ -64,6 +63,7 @@ def parallel_func_to_apply(data):
 def main():
     df = pd.read_csv(c_vars.train_file)
     # df = pd.read_csv(c_vars.train_file_processed, encoding = "ISO-8859-1")
+    # df = pd.read_csv(c_vars.train_file_processed)
     
     df.drop(['User_ID'], axis = 1, inplace = True)
     df['Is_Response'] = df['Is_Response'].apply(lambda x: 1 if x == 'happy' else 0)
@@ -79,8 +79,8 @@ def main():
     df['word_count'] = df['Description_Clean'].apply(lambda x: len(x.split(' ')))
 
     df_train, df_dev = train_test_split(df.as_matrix(), test_size = 0.2, random_state = 42)
-    df_train = pd.DataFrame(df_train, columns = c_vars.header_useful + ['text_length', 'word_count', 'Description_Clean'])
-    df_dev = pd.DataFrame(df_dev, columns = c_vars.header_useful + ['text_length', 'word_count', 'Description_Clean'])
+    df_train = pd.DataFrame(df_train, columns = c_vars.header_useful + ['Description_Clean', 'text_length', 'word_count'])
+    df_dev = pd.DataFrame(df_dev, columns = c_vars.header_useful + ['Description_Clean', 'text_length', 'word_count'])
 
     df_device = df_train.groupby(['Device_Used'])['Is_Response'].agg(['count', np.sum])
     df_device.reset_index(inplace = True)
@@ -102,13 +102,14 @@ def main():
     # print ('y_train ' + str(y_train.shape))
     # print ('y_dev '   + str(y_dev.shape))
 
-    # print (X_train)
+    # print (X_train[1,:])
 
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.feature_extraction.text import CountVectorizer
     # tfVect = CountVectorizer()
-    tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
-    # tfVect = TfidfVectorizer()
+    # tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
+    tfVect = TfidfVectorizer(min_df = 3, ngram_range = (1, 3))
+    # tfVect = TfidfVectorizer(min_df = 5)
 
     tfVect.fit(X_train[:, 0])
     X_train_tfidf = tfVect.transform(X_train[:, 0])
@@ -136,11 +137,23 @@ def main():
         # clf = SVC(C = i)
         clf.fit(X_train_tfidf, y_train)
         y_pred = clf.predict(X_dev_tfidf)
+        y_pred_proba = clf.predict_proba(X_dev_tfidf)[:,1]
         print (str(i) + ',' + str(accuracy_score(y_dev, y_pred)) + ',' + str(roc_auc_score(y_dev, y_pred)))
 
         df_dev['y_dev'] = y_dev
         df_dev['y_pred'] = y_pred
-        df_dev.to_csv('../inputs/dev_analysis.csv')
+        df_dev['y_pred_proba'] = y_pred_proba
+        df_dev.to_csv('../inputs/dev_analysis.csv', index = False)
+
+        values = X_train_tfidf.max(0).toarray()[0]
+        feature_names = np.array(tfVect.get_feature_names())
+        features_series = pd.Series(values, index = feature_names)
+        top_20 = features_series.nlargest(20)
+        bot_20 = features_series.nsmallest(20)
+        print ('bot_20')
+        print (bot_20)
+        print ('top_20')
+        print (top_20)
 
     '''
     clf = MultinomialNB(alpha = 0.1)
