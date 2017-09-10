@@ -32,6 +32,7 @@ from sklearn.ensemble import RandomForestClassifier
 # from xgboost.sklearn import XGBClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 
 # reload(sys) 
 # sys.setdefaultencoding('utf8')
@@ -138,7 +139,7 @@ def main():
     # tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
     # tfVect = TfidfVectorizer(min_df = 3, ngram_range = (1, 3))
     tfVect1 = TfidfVectorizer(max_features=6000, ngram_range = (1,1))
-    tfVect2 = TfidfVectorizer(max_features=2000, ngram_range = (2,2))
+    tfVect2 = TfidfVectorizer(max_features=1, ngram_range = (2,2))
     tfVect3 = TfidfVectorizer(max_features=1000, ngram_range = (1,1))
     # tfVect = TfidfVectorizer(min_df = 5)
 
@@ -182,10 +183,16 @@ def main():
                 # learning_rate    = 1,
                 # random_state = 42
                 # )
+        clf = MLPClassifier(activation         = 'logistic',
+                            hidden_layer_sizes = (200, 50, 10),
+                            learning_rate      = 'invscaling',
+                            max_iter           = 200,
+                            solver             = 'adam',
+                            random_state = 42)
         # clf = MultinomialNB(alpha = i)
         # clf = GaussianNB()
         # clf = SVC(C = i)
-        clf = LogisticRegression(penalty = 'l2', C = i)
+        # clf = LogisticRegression(penalty = 'l2', C = i)
 
         if type(X_train_tfidf) is not np.ndarray:
             X_train_tfidf = X_train_tfidf.toarray()
@@ -223,10 +230,10 @@ def main():
         # print ('top_20')
         # print (top_20)
 
-    
+    '''
     # clf = MultinomialNB(alpha = 0.1)
     # clf.fit(X_train_tfidf, y_train)
-    '''
+    
     # predict on the submit set
     df_submit = pd.read_csv(c_vars.test_file)
 
@@ -246,7 +253,7 @@ def main():
     y_pred_submit = clf.predict(X_submit_tfidf)
     df_submit['Is_Response'] = y_pred_submit
     df_submit['Is_Response'] = df_submit['Is_Response'].apply(lambda x: 'happy' if x == 1 else 'not_happy')
-    df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170910_2351_1_lr.csv', index = False)
+    df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170911_0020_1_lr.csv', index = False)
     '''
 
 if __name__ == '__main__':
