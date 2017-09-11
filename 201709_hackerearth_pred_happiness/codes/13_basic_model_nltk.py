@@ -29,7 +29,7 @@ from sklearn.naive_bayes import MultinomialNB, GaussianNB
 from sklearn.svm import SVC
 from sklearn.metrics import roc_auc_score, accuracy_score
 from sklearn.ensemble import RandomForestClassifier
-# from xgboost.sklearn import XGBClassifier
+from xgboost.sklearn import XGBClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
@@ -87,6 +87,7 @@ def parallel_func_to_apply(data):
     return (data)
 
 def main():
+    
     # df = pd.read_csv(c_vars.train_file)
     df = pd.read_csv(c_vars.train_file_processed, encoding = "ISO-8859-1")
     df['Description_Clean'].fillna('', inplace = True, axis = 0)
@@ -97,11 +98,15 @@ def main():
     df['Is_Response'] = df['Is_Response'].apply(lambda x: 1 if x == 'happy' else 0)
     df['Browser_Used'] = df['Browser_Used'].apply(lambda x: c_vars.browser_dict[x])
 
-    print ('Cleaning started at ' + str(datetime.now()))
-    # df['Description'] = df['Description'].apply(lambda x: cleaning_function(x))
+    # print ('Cleaning started at ' + str(datetime.now()))
     df = parallelize_dataframe(df, parallel_func_to_apply)
-    print ('Cleaning complete at ' + str(datetime.now()))
+    # print ('Cleaning complete at ' + str(datetime.now()))
     df.to_csv(c_vars.train_file_processed, index = False)
+    
+    df_submit = pd.read_csv(c_vars.test_file)
+    df_submit['Browser_Used'] = df_submit['Browser_Used'].apply(lambda x: c_vars.browser_dict[x])
+    df_submit = parallelize_dataframe(df_submit, parallel_func_to_apply)
+    df_submit.to_csv(c_vars.test_file_processed, index = False)
     # sys.exit()
     '''
     df['text_length'] = df['Description_Clean'].apply(lambda x: len(x))
@@ -171,9 +176,9 @@ def main():
         # clf = XGBClassifier(
                     # colsample_bytree      = 0.6,
                     # learning_rate         = 0.05,
-                    # max_depth             = 3,
+                    # max_depth             = 4,
                     # min_child_weight      = 1,
-                    # n_estimators          = 10,
+                    # n_estimators          = 20,
                     # reg_alpha             = 0,
                     # reg_lambda            = 10,
                     # subsample             = 0.8,
@@ -182,8 +187,7 @@ def main():
                 # max_depth        = 7,
                 # n_estimators     = 40,
                 # learning_rate    = 1,
-                # random_state = 42
-                # )
+                # random_state = 42)
         # clf = MLPClassifier(activation         = 'logistic',
                             # hidden_layer_sizes = (200, 50, 10),
                             # learning_rate      = 'invscaling',
@@ -232,15 +236,15 @@ def main():
         # print (top_20)
 
     
-    # clf = MultinomialNB(alpha = 0.1)
-    # clf.fit(X_train_tfidf, y_train)
     
     # predict on the submit set
-    df_submit = pd.read_csv(c_vars.test_file)
+    df_submit = pd.read_csv(c_vars.test_file_processed)
+    df_submit['Description_Clean'].fillna('', inplace = True, axis = 0)
+    df_submit['Description_Clean_Adj'].fillna('', inplace = True, axis = 0)
 
-    df_submit = parallelize_dataframe(df_submit, parallel_func_to_apply)
     df_submit['text_length'] = df_submit['Description_Clean'].apply(lambda x: len(x))
     df_submit['word_count'] = df_submit['Description_Clean'].apply(lambda x: len(x.split(' ')))
+
     df_submit = pd.merge(df_submit, df_device, how = 'left', on = 'Device_Used', suffixes = ('', ''))
     X_submit = df_submit[['Description_Clean', 'Description_Clean_Adj', 'text_length', 'word_count', 'target_rate']].as_matrix()
     X_submit_tfidf = hstack((tfVect1.transform(X_submit[:, 0]), tfVect2.transform(X_submit[:, 0]), tfVect3.transform(X_submit[:, 1])))
@@ -254,7 +258,7 @@ def main():
     y_pred_submit = clf.predict(X_submit_tfidf)
     df_submit['Is_Response'] = y_pred_submit
     df_submit['Is_Response'] = df_submit['Is_Response'].apply(lambda x: 'happy' if x == 1 else 'not_happy')
-    df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170911_1625_10_lr.csv', index = False)
+    df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170912_1200_1_lr.csv', index = False)
     
 
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ pre_path = '../'
 train_file = pre_path + 'inputs/train.csv'
 test_file = pre_path + 'inputs/test.csv'
 train_file_processed = pre_path + 'inputs/train_processed.csv'
+test_file_processed = pre_path + 'inputs/test_processed.csv'
 
 train_split_train = pre_path + 'inputs/train_train.csv'
 train_split_train_sample = pre_path + 'inputs/train_train_sample.csv'
