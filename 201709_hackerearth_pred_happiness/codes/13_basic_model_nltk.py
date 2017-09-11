@@ -34,12 +34,12 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 
-# reload(sys) 
-# sys.setdefaultencoding('utf8')
+reload(sys) 
+sys.setdefaultencoding('utf8')
 row_ind = 0
 regex_punc = re.compile('[%s]' % re.escape(string.punctuation))
 regex_nt = re.compile('nt')
-stopwords_set = set(stopwords.words('english'))
+stopwords_set = set(stopwords.words('english')) - set(['but','if','as','until','while','of','against','again','then','once','no','nor','not','only','too','very','should','ain','aren','couldn','didn','doesn','hadn','hasn','haven','isn','ma','mightn','mustn','needn','shan','shouldn','wasn','weren','won',])
 porter = PorterStemmer()
 snowball = SnowballStemmer('english')
 wordnet = WordNetLemmatizer()
@@ -49,7 +49,7 @@ num_cores = 2 #number of cores on your machine
 def cleaning_function(x):
     # x is a piece of text to be cleaned
 
-    # x = unicode(x, errors='ignore')
+    x = unicode(x, errors='ignore')
     x = x.lower()
     # print (x)
     x = word_tokenize(x)
@@ -79,7 +79,7 @@ def parallelize_dataframe(df, func):
     df = pd.concat(pool.map(func, df_split))
     pool.close()
     pool.join()
-    return df
+    return (df)
 
 def parallel_func_to_apply(data):
     data['Description_Clean'] = data['Description'].apply(lambda x: cleaning_function(x))
@@ -102,6 +102,7 @@ def main():
     df = parallelize_dataframe(df, parallel_func_to_apply)
     print ('Cleaning complete at ' + str(datetime.now()))
     df.to_csv(c_vars.train_file_processed, index = False)
+    # sys.exit()
     '''
     df['text_length'] = df['Description_Clean'].apply(lambda x: len(x))
     df['word_count'] = df['Description_Clean'].apply(lambda x: len(x.split(' ')))
@@ -138,9 +139,9 @@ def main():
     # tfVect = CountVectorizer()
     # tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
     # tfVect = TfidfVectorizer(min_df = 3, ngram_range = (1, 3))
-    tfVect1 = TfidfVectorizer(max_features=6000, ngram_range = (1,1))
-    tfVect2 = TfidfVectorizer(max_features=1, ngram_range = (2,2))
-    tfVect3 = TfidfVectorizer(max_features=1000, ngram_range = (1,1))
+    tfVect1 = TfidfVectorizer(max_features=1800, ngram_range = (1,1))
+    tfVect2 = TfidfVectorizer(max_features=1000, ngram_range = (2,2))
+    tfVect3 = TfidfVectorizer(max_features=200, ngram_range = (1,1))
     # tfVect = TfidfVectorizer(min_df = 5)
 
     tfVect1.fit(X_train[:, 0])
@@ -183,16 +184,16 @@ def main():
                 # learning_rate    = 1,
                 # random_state = 42
                 # )
-        clf = MLPClassifier(activation         = 'logistic',
-                            hidden_layer_sizes = (200, 50, 10),
-                            learning_rate      = 'invscaling',
-                            max_iter           = 200,
-                            solver             = 'adam',
-                            random_state = 42)
+        # clf = MLPClassifier(activation         = 'logistic',
+                            # hidden_layer_sizes = (200, 50, 10),
+                            # learning_rate      = 'invscaling',
+                            # max_iter           = 200,
+                            # solver             = 'adam',
+                            # random_state = 42)
         # clf = MultinomialNB(alpha = i)
         # clf = GaussianNB()
         # clf = SVC(C = i)
-        # clf = LogisticRegression(penalty = 'l2', C = i)
+        clf = LogisticRegression(penalty = 'l2', C = i)
 
         if type(X_train_tfidf) is not np.ndarray:
             X_train_tfidf = X_train_tfidf.toarray()
@@ -230,7 +231,7 @@ def main():
         # print ('top_20')
         # print (top_20)
 
-    '''
+    
     # clf = MultinomialNB(alpha = 0.1)
     # clf.fit(X_train_tfidf, y_train)
     
@@ -253,8 +254,8 @@ def main():
     y_pred_submit = clf.predict(X_submit_tfidf)
     df_submit['Is_Response'] = y_pred_submit
     df_submit['Is_Response'] = df_submit['Is_Response'].apply(lambda x: 'happy' if x == 1 else 'not_happy')
-    df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170911_0020_1_lr.csv', index = False)
-    '''
+    df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170911_1625_10_lr.csv', index = False)
+    
 
 if __name__ == '__main__':
     main()
