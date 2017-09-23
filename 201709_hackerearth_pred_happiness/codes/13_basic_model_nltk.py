@@ -17,10 +17,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 import sys
 import gc
 
-<<<<<<< HEAD
 from scipy import sparse
-=======
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
 from scipy.stats import pearsonr
 from sklearn.feature_selection import chi2
 from scipy.sparse import hstack, csr_matrix, coo_matrix
@@ -44,7 +41,6 @@ from sklearn.neural_network import MLPClassifier
 import lightgbm as lgb
 from catboost import CatBoostClassifier
 
-<<<<<<< HEAD
 # codes for compatibility between python 2 and 3
 try:
     reload(sys)
@@ -55,10 +51,8 @@ try:
 except AttributeError:
     pass
 
-=======
 reload(sys)
 sys.setdefaultencoding('utf8')
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
 row_ind = 0
 
 regex_punc = re.compile('[%s]' % re.escape(string.punctuation))
@@ -76,14 +70,11 @@ num_cores = 2 #number of cores on your machine
 def cleaning_function(x):
     # x is a piece of text to be cleaned
 
-<<<<<<< HEAD
     try:
         x = unicode(x, errors='ignore')
     except NameError:
         pass
-=======
     x = unicode(x, errors='ignore')
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
     x = x.lower()
     # print (x)
     x = regex_horrible.sub(u' horrible ', x)
@@ -152,11 +143,8 @@ def main():
     # create more copies of the unhappy/bad reviews to identify those words
     # df = pd.concat([df, df.loc[df['Is_Response'] == 0,], df.loc[df['Is_Response'] == 0,]])
 
-<<<<<<< HEAD
     df_train, df_dev = train_test_split(df.as_matrix(), test_size = 0.2, random_state = 442)
-=======
     df_train, df_dev = train_test_split(df.as_matrix(), test_size = 0.1, random_state = 442)
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
     df_train = pd.DataFrame(df_train, columns = c_vars.header_useful + ['Description_Clean', 'Description_Clean_Adj', 'text_length', 'word_count'])
     df_dev = pd.DataFrame(df_dev, columns = c_vars.header_useful + ['Description_Clean', 'Description_Clean_Adj', 'text_length', 'word_count'])
 
@@ -184,30 +172,24 @@ def main():
 
     # tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
     # tfVect = TfidfVectorizer(min_df = 3, ngram_range = (1, 3))
-<<<<<<< HEAD
     tfVect1 = TfidfVectorizer(max_features=3600, ngram_range = (1,1))
     tfVect2 = TfidfVectorizer(max_features=4000, ngram_range = (2,2))
     tfVect3 = TfidfVectorizer(max_features=3500, ngram_range = (1,1))
     # countVect = CountVectorizer()
-=======
     tfVect1 = TfidfVectorizer(max_features = 200, ngram_range = (1,1), min_df = 50)
     tfVect2 = TfidfVectorizer(max_features = 400, ngram_range = (2,2), min_df = 50)
     tfVect3 = TfidfVectorizer(max_features = 200, ngram_range = (1,1), min_df = 50)
     countVect = CountVectorizer()
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
     # tfVect = TfidfVectorizer(min_df = 5)
 
     tfVect1.fit(X_train[:, 0])
     tfVect2.fit(X_train[:, 0])
     tfVect3.fit(X_train[:, 1])
     # countVect.fit(X_train[:, 1])
-<<<<<<< HEAD
     X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
-=======
     # X_train_tfidf = hstack((tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
     X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
     # X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1]), countVect.transform(X_train[:, 1])))
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
     # truncatedsvd = TruncatedSVD(n_components = 500, random_state = 42)
     # truncatedsvd.fit(X_train_tfidf)
     # X_train_tfidf = truncatedsvd.transform(X_train_tfidf)
@@ -253,7 +235,6 @@ def main():
 
     for param_list in param_space:
     # for i in [0.1]:
-<<<<<<< HEAD
     # for i in [1]:
     # for i in [1.01]:
     # for i in np.logspace(-3, 0, num = 0 + 3 + 1):
@@ -272,7 +253,6 @@ def main():
                             # reg_alpha             = param_list[param_to_int_dict['reg_alpha']],
                             # reg_lambda            = param_list[param_to_int_dict['reg_lambda']],
                             # subsample             = param_list[param_to_int_dict['subsample']])
-=======
     # for i in [0.000001, 0.00001, 0.0001, 0.001]:
     for i in [1.01]:
     # for i in np.logspace(-3, 0, num = 0 + 3 + 1):
@@ -289,7 +269,6 @@ def main():
                     # reg_lambda            = 10,
                     # subsample             = 0.8,
                     # )
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
         # clf = GradientBoostingClassifier(
                 # max_depth        = 7,
                 # n_estimators     = 40,
@@ -304,14 +283,12 @@ def main():
         # clf = MultinomialNB(alpha = i)
         # clf = GaussianNB()
         # clf = SVC(C = i)
-<<<<<<< HEAD
         clf = LogisticRegression(penalty = param_list[param_to_int_dict['penalty']],
                                  C = param_list[param_to_int_dict['C']])
 
         # if type(X_train_tfidf) is not np.ndarray:
             # X_train_tfidf = X_train_tfidf.toarray()
             # X_dev_tfidf = X_dev_tfidf.toarray()
-=======
         # clf = LogisticRegression(penalty = 'l2', C = i)
         clf = CatBoostClassifier(iterations=50, learning_rate=0.03, depth=4, loss_function='Logloss', class_weights = [1/0.67,1])
         if type(X_train_tfidf) is not np.ndarray:
@@ -328,7 +305,6 @@ def main():
             y_train, y_val = y_train_tfidf[train_indices], y_train_tfidf[test_indices]
 
             clf.fit(X_train, y_train)
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
 
             # val set
             y_pred = clf.predict(X_val)
@@ -336,10 +312,8 @@ def main():
             y_pred_train = clf.predict(X_train)
             y_pred_proba_train = clf.predict_proba(X_train)[:,1]
 
-<<<<<<< HEAD
         print ('Train, ' + str(accuracy_score(y_train, y_pred_train)) + ',' + str(roc_auc_score(y_train, y_pred_train)))
         print ('Test, ' + str(accuracy_score(y_dev, y_pred)) + ',' + str(roc_auc_score(y_dev, y_pred)))
-=======
             print ('Train ' + 'CV ' + str(kf_index) + ' ,' + str(i) + ' ,' + str(accuracy_score(y_train, y_pred_train)) + ',' + str(roc_auc_score(y_train, y_pred_proba_train)))
             print ('Val   ' + 'CV ' + str(kf_index) + ' ,' + str(i) + ' ,' + str(accuracy_score(y_val, y_pred)) + ',' + str(roc_auc_score(y_val, y_pred_proba)))
 
@@ -348,7 +322,6 @@ def main():
             y_pred_proba = clf.predict_proba(X_dev_tfidf)[:,1]
 
             print ('Dev   ' + 'CV ' + str(kf_index) + ' ,' + str(i) + ' ,' + str(accuracy_score(y_dev_tfidf, y_pred)) + ',' + str(roc_auc_score(y_dev_tfidf, y_pred_proba)))
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
 
         
         df_dev['y_dev'] = y_dev
@@ -377,7 +350,6 @@ def main():
         # print ('top_20')
         # print (top_20)
 
-<<<<<<< HEAD
     
     # delete training data to clean up memory
     del X_train
@@ -394,8 +366,6 @@ def main():
     del y_pred_proba_train
     gc.collect()
 
-=======
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
     
     # delete training data to clean up memory
     del X_train
@@ -413,11 +383,8 @@ def main():
 
     '''
     # predict on the submit set
-<<<<<<< HEAD
     df_submit = pd.read_csv(c_vars.test_file_processed, encoding = "ISO-8859-1")
-=======
     df_submit = pd.read_csv(c_vars.test_file_processed)
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
     df_submit['Description_Clean'].fillna('', inplace = True, axis = 0)
     df_submit['Description_Clean_Adj'].fillna('', inplace = True, axis = 0)
 
@@ -426,13 +393,10 @@ def main():
 
     df_submit = pd.merge(df_submit, df_device, how = 'left', on = 'Device_Used', suffixes = ('', ''))
     X_submit = df_submit[['Description_Clean', 'Description_Clean_Adj', 'text_length', 'word_count', 'target_rate']].as_matrix()
-<<<<<<< HEAD
     # X_submit_tfidf = hstack((tfVect1.transform(X_submit[:, 0]), tfVect2.transform(X_submit[:, 0]), tfVect3.transform(X_submit[:, 1])))
     X_submit_tfidf = hstack((tfVect1.transform(X_submit[:, 0]), tfVect2.transform(X_submit[:, 0]), tfVect3.transform(X_submit[:, 1])))
-=======
     X_submit_tfidf = hstack((tfVect1.transform(X_submit[:, 0]), tfVect2.transform(X_submit[:, 0])))
     # X_submit_tfidf = hstack((tfVect1.transform(X_submit[:, 0]), tfVect2.transform(X_submit[:, 0]), tfVect3.transform(X_submit[:, 1])))
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
     # X_submit_tfidf = X_submit_tfidf.toarray()
     # X_submit_tfidf = truncatedsvd.transform(X_submit_tfidf)
     # X_submit_tfidf = tfVect.transform(X_submit[:, 0])
@@ -443,13 +407,10 @@ def main():
     y_pred_submit = clf.predict(X_submit_tfidf)
     df_submit['Is_Response'] = y_pred_submit
     df_submit['Is_Response'] = df_submit['Is_Response'].apply(lambda x: 'happy' if x == 1 else 'not_happy')
-<<<<<<< HEAD
     df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170917_2230_1_lr.csv', index = False)
     
-=======
     df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170922_1430_1_lr.csv', index = False)
     '''
->>>>>>> 046558350d3fe7e9a4c1dfba22e98440ad2f771b
 
 if __name__ == '__main__':
     main()
