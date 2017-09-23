@@ -42,7 +42,8 @@ y_dev = df_dev['Is_Response'].as_matrix().astype(np.int64)
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 # tfVect = CountVectorizer()
-tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
+tfVect = CountVectorizer(min_df = 5, ngram_range = (2, 4))
+# tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
 # tfVect = TfidfVectorizer()
 
 tfVect.fit(X_train[:, 0])
@@ -90,7 +91,7 @@ multinomialNB count vec, text length, word length, target rate
 10.0   0.828945678695  0.745283319229
 100.0  0.678695261333  0.5
 
-multinomialNB tfidf min_df = 5 ngram_range=(2,4)
+multinomialNB tfidf min_df = 5 ngram_range=(2,4), LB 0.88379
 0.001  0.877616540388  0.839543691442
 0.01   0.878515474509  0.845467580524
 0.1    0.87979966611   0.849465404025
@@ -98,7 +99,7 @@ multinomialNB tfidf min_df = 5 ngram_range=(2,4)
 10.0   0.679722614614  0.501598721023
 100.0  0.678695261333  0.5
 '''
-'''
+
 for i in np.logspace(-3, 2, num = 2 + 3 + 1):
 # for i in np.logspace(0, 5, num = 0 + 5 + 1):
     clf = MultinomialNB(alpha = i)
@@ -106,8 +107,8 @@ for i in np.logspace(-3, 2, num = 2 + 3 + 1):
     clf.fit(X_train_tfidf, y_train)
     y_pred = clf.predict(X_dev_tfidf)
     print (str(i) + ',' + str(accuracy_score(y_dev, y_pred)) + ',' + str(roc_auc_score(y_dev, y_pred)))
-'''
 
+'''
 clf = MultinomialNB(alpha = 0.1)
 clf.fit(X_train_tfidf, y_train)
 
@@ -127,3 +128,4 @@ y_pred_submit = clf.predict(X_submit_tfidf)
 df_submit['Is_Response'] = y_pred_submit
 df_submit['Is_Response'] = df_submit['Is_Response'].apply(lambda x: 'happy' if x == 1 else 'not_happy')
 df_submit[['User_ID', 'Is_Response']].to_csv('../output/submit_20170709_2306_0.1.csv', index = False)
+'''

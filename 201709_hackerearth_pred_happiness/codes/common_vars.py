@@ -10,6 +10,7 @@ pre_path = '../'
 train_file = pre_path + 'inputs/train.csv'
 test_file = pre_path + 'inputs/test.csv'
 train_file_processed = pre_path + 'inputs/train_processed.csv'
+test_file_processed = pre_path + 'inputs/test_processed.csv'
 
 train_split_train = pre_path + 'inputs/train_train.csv'
 train_split_train_sample = pre_path + 'inputs/train_train_sample.csv'
@@ -42,3 +43,25 @@ def add_feature(X, feature_to_add):
     '''
     from scipy.sparse import csr_matrix, hstack
     return hstack([X, csr_matrix(feature_to_add).T], 'csr')
+
+def get_param_space(param_dict):
+    param_space = []
+    param_list = sorted(list([k for k in param_dict]))
+    param_to_int_dict = dict([[param_list[i], i] for i in range(len(param_list))])
+    # print (param_to_int_dict)
+    for param in param_list:
+        curr_param_space_length = len(param_space)
+        if (curr_param_space_length == 0):
+            for i in range(len(param_dict[param])):
+                param_space.append([param_dict[param][i]])
+        else:
+            for i in range(len(param_dict[param]) - 1):
+                for j in range(curr_param_space_length):
+                    param_space.append(list(param_space[j]) + [param_dict[param][i]])
+
+            for i in range(curr_param_space_length):
+                param_space[i].append(param_dict[param][-1])
+
+    # print (param_space)
+    param_space = sorted(param_space)
+    return (param_space, param_to_int_dict)

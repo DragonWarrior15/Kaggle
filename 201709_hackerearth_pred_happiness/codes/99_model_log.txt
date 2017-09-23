@@ -220,3 +220,144 @@ location room great       0.618159
 beat location             0.618144
 great place stay          0.616362
 dtype: float64
+
+
+LB 0.88899
+Train 1,0.910643763044,0.887670588188
+Test 1,0.892770001284,0.868070765715
+negative words removed from stop words
+tfVect1 = TfidfVectorizer(max_features=1800, ngram_range = (1,1))
+tfVect2 = TfidfVectorizer(max_features=1000, ngram_range = (2,2))
+tfVect3 = TfidfVectorizer(max_features=200, ngram_range = (1,1)) on only adjectives
+X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
+clf = LogisticRegression(penalty = 'l2', C = 1)
+def cleaning_function(x):
+    # x is a piece of text to be cleaned
+
+    x = unicode(x, errors='ignore')
+    x = x.lower()
+    # print (x)
+    x = word_tokenize(x)
+    
+    # x = [regex_punc.sub(u'', token) for token in x if not regex_punc.sub(u'', token) == u'']
+    x = [regex_punc.sub(u'', token) for token in x]
+    x = [regex_nt.sub(u'not', token) for token in x]
+    x = list(filter(lambda x: x != u'', x))
+    # x = [token for token in x if token not in stopwords.words('english')]
+    x = list(filter(lambda word: word not in stopwords_set, x))
+    # x = [porter.stem(token) for token in x]
+    # x = list(map(porter.stem, x))
+    x = list(map(wordnet.lemmatize, x))
+    
+    x = ' '.join(x)
+    return (x)
+
+LB 0.88885
+Train 1,0.909744742334,0.886499959482
+Test 1,0.894439450366,0.869405894395
+negative words removed from stop words
+tfVect1 = TfidfVectorizer(max_features=1800, ngram_range = (1,1))
+tfVect2 = TfidfVectorizer(max_features=1000, ngram_range = (2,2))
+X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0])))
+clf = LogisticRegression(penalty = 'l2', C = 1)
+
+
+LB 0.88962
+Train 1,0.910354792101,0.887612285681
+Test 1,0.895338384487,0.869331470894
+negative words removed from stop words
+df_train, df_dev = train_test_split(df.as_matrix(), test_size = 0.2, random_state = 442)
+tfVect1 = TfidfVectorizer(max_features=1800, ngram_range = (1,1))
+tfVect2 = TfidfVectorizer(max_features=1000, ngram_range = (2,2))
+tfVect3 = TfidfVectorizer(max_features=200, ngram_range = (1,1)) on only adjectives
+X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
+clf = LogisticRegression(penalty = 'l2', C = 1)
+def cleaning_function(x):
+    # x is a piece of text to be cleaned
+
+    x = unicode(x, errors='ignore')
+    x = x.lower()
+    # print (x)
+    x = regex_horrible.sub(u' horrible ', x)
+    x = regex_hyphen.sub(u'', x)
+    x = word_tokenize(x)
+    
+    # x = [regex_punc.sub(u'', token) for token in x if not regex_punc.sub(u'', token) == u'']
+    x = [regex_punc.sub(u'', token) for token in x]
+    x = [regex_nt.sub(u'not', token) for token in x]
+    x = list(filter(lambda x: x != u'', x))
+    # x = [token for token in x if token not in stopwords.words('english')]
+    x = list(filter(lambda word: word not in stopwords_set, x))
+    # x = [porter.stem(token) for token in x]
+    # x = list(map(porter.stem, x))
+    x = list(map(wordnet.lemmatize, x))
+    
+    x = ' '.join(x)
+    return (x)
+
+
+LB 0.89239
+Train 1,0.932926633489,0.914651100534
+Test 1,0.902529857455,0.876951525389
+negative words removed from stop words
+df_train, df_dev = train_test_split(df.as_matrix(), test_size = 0.2, random_state = 442)
+tfVect1 = TfidfVectorizer(max_features=3000, ngram_range = (1,1))
+tfVect2 = TfidfVectorizer(max_features=4000, ngram_range = (2,2))
+tfVect3 = TfidfVectorizer(max_features=3000, ngram_range = (1,1))  # only adjectives
+X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
+clf = LogisticRegression(penalty = 'l2', C = 1)
+def cleaning_function(x):
+    # x is a piece of text to be cleaned
+
+    x = unicode(x, errors='ignore')
+    x = x.lower()
+    # print (x)
+    x = regex_horrible.sub(u' horrible ', x)
+    x = regex_hyphen.sub(u'', x)
+    x = word_tokenize(x)
+    
+    # x = [regex_punc.sub(u'', token) for token in x if not regex_punc.sub(u'', token) == u'']
+    x = [regex_punc.sub(u'', token) for token in x]
+    x = [regex_nt.sub(u'not', token) for token in x]
+    x = list(filter(lambda x: x != u'', x))
+    # x = [token for token in x if token not in stopwords.words('english')]
+    x = list(filter(lambda word: word not in stopwords_set, x))
+    # x = [porter.stem(token) for token in x]
+    # x = list(map(porter.stem, x))
+    x = list(map(wordnet.lemmatize, x))
+    
+    x = ' '.join(x)
+    return (x)
+
+LB 0.89210
+Train, 0.93411462514,0.916194435557
+Test, 0.903557210736,0.878342448655
+negative words removed from stop words
+df_train, df_dev = train_test_split(df.as_matrix(), test_size = 0.2, random_state = 442)
+tfVect1 = TfidfVectorizer(max_features=3600, ngram_range = (1,1))
+tfVect2 = TfidfVectorizer(max_features=4000, ngram_range = (2,2))
+tfVect3 = TfidfVectorizer(max_features=3500, ngram_range = (1,1))  # only adjectives
+X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
+clf = LogisticRegression(penalty = 'l2', C = 1)
+def cleaning_function(x):
+    # x is a piece of text to be cleaned
+
+    x = unicode(x, errors='ignore')
+    x = x.lower()
+    # print (x)
+    x = regex_horrible.sub(u' horrible ', x)
+    x = regex_hyphen.sub(u'', x)
+    x = word_tokenize(x)
+    
+    # x = [regex_punc.sub(u'', token) for token in x if not regex_punc.sub(u'', token) == u'']
+    x = [regex_punc.sub(u'', token) for token in x]
+    x = [regex_nt.sub(u'not', token) for token in x]
+    x = list(filter(lambda x: x != u'', x))
+    # x = [token for token in x if token not in stopwords.words('english')]
+    x = list(filter(lambda word: word not in stopwords_set, x))
+    # x = [porter.stem(token) for token in x]
+    # x = list(map(porter.stem, x))
+    x = list(map(wordnet.lemmatize, x))
+    
+    x = ' '.join(x)
+    return (x)
