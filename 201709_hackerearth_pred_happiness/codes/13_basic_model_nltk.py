@@ -41,6 +41,9 @@ from sklearn.neural_network import MLPClassifier
 import lightgbm as lgb
 from catboost import CatBoostClassifier
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # codes for compatibility between python 2 and 3
 try:
     reload(sys)
@@ -51,8 +54,6 @@ try:
 except AttributeError:
     pass
 
-reload(sys)
-sys.setdefaultencoding('utf8')
 row_ind = 0
 
 regex_punc = re.compile('[%s]' % re.escape(string.punctuation))
@@ -74,7 +75,6 @@ def cleaning_function(x):
         x = unicode(x, errors='ignore')
     except NameError:
         pass
-    x = unicode(x, errors='ignore')
     x = x.lower()
     # print (x)
     x = regex_horrible.sub(u' horrible ', x)
@@ -135,11 +135,11 @@ def main():
     df_submit['Browser_Used'] = df_submit['Browser_Used'].apply(lambda x: c_vars.browser_dict[x])
     df_submit = parallelize_dataframe(df_submit, parallel_func_to_apply)
     df_submit.to_csv(c_vars.test_file_processed, index = False)
-    # sys.exit()
+    sys.exit()
     '''
     df['text_length'] = df['Description_Clean'].apply(lambda x: len(x))
     df['word_count'] = df['Description_Clean'].apply(lambda x: len(x.split(' ')))
-
+    
     # create more copies of the unhappy/bad reviews to identify those words
     # df = pd.concat([df, df.loc[df['Is_Response'] == 0,], df.loc[df['Is_Response'] == 0,]])
 
@@ -163,42 +163,38 @@ def main():
     y_train_tfidf = df_train['Is_Response'].as_matrix().astype(np.int64)
     y_dev_tfidf = df_dev['Is_Response'].as_matrix().astype(np.int64)
 
-    # print ('X_train ' + str(X_train.shape))
-    # print ('X_dev '   + str(X_dev.shape))
-    # print ('y_train ' + str(y_train.shape))
-    # print ('y_dev '   + str(y_dev.shape))
 
-    # print (X_train[1,:])
-
-    # tfVect = TfidfVectorizer(min_df = 5, ngram_range = (2, 4))
-    # tfVect = TfidfVectorizer(min_df = 3, ngram_range = (1, 3))
     tfVect1 = TfidfVectorizer(max_features=3600, ngram_range = (1,1))
     tfVect2 = TfidfVectorizer(max_features=4000, ngram_range = (2,2))
     tfVect3 = TfidfVectorizer(max_features=3500, ngram_range = (1,1))
-    # countVect = CountVectorizer()
-    tfVect1 = TfidfVectorizer(max_features = 200, ngram_range = (1,1), min_df = 50)
-    tfVect2 = TfidfVectorizer(max_features = 400, ngram_range = (2,2), min_df = 50)
-    tfVect3 = TfidfVectorizer(max_features = 200, ngram_range = (1,1), min_df = 50)
+    tfVect3 = CountVectorizer()
     countVect = CountVectorizer()
     # tfVect = TfidfVectorizer(min_df = 5)
 
-    tfVect1.fit(X_train[:, 0])
+    # tfVect1.fit(X_train[:, 0])
     tfVect2.fit(X_train[:, 0])
-    tfVect3.fit(X_train[:, 1])
-    # countVect.fit(X_train[:, 1])
-    X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
+    # tfVect3.fit(X_train[:, 1])
+    countVect.fit(X_train[:, 0])
+    # X_train_tfidf = countVect.transform(X_train[:, 0])
+    X_train_tfidf = hstack((tfVect2.transform(X_train[:, 1]), countVect.transform(X_train[:, 0])))
+    # X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
     # X_train_tfidf = hstack((tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
-    X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1])))
     # X_train_tfidf = hstack((tfVect1.transform(X_train[:, 0]), tfVect2.transform(X_train[:, 0]), tfVect3.transform(X_train[:, 1]), countVect.transform(X_train[:, 1])))
-    # truncatedsvd = TruncatedSVD(n_components = 500, random_state = 42)
+    # truncatedsvd = TruncatedSVD(n_components = 100, random_state = 42)
     # truncatedsvd.fit(X_train_tfidf)
-    # X_train_tfidf = truncatedsvd.transform(X_train_tfidf)
-    # X_train_tfidf = c_vars.add_feature(X_train_tfidf, X_train[:, 2].astype(np.float64))
-    # X_train_tfidf = c_vars.add_feature(X_train_tfidf, X_train[:, 3].astype(np.int64))
-    # X_train_tfidf = c_vars.add_feature(X_train_tfidf, X_train[:, 4].astype(np.int64))
-    
+
+    # write the vectors to a file
+    '''
+    with open('../analysis/svd_vectors.csv', 'w') as f:
+        for i in range(truncatedsvd.explained_variance_.shape[0]):
+            f.write(str(truncatedsvd.explained_variance_[i]) + ',' + str(truncatedsvd.explained_variance_ratio_[i]) + '\n')
+    # sys.exit()
+    '''
+
+    # X_dev_tfidf = countVect.transform(X_dev[:, 0])
+    X_dev_tfidf = hstack((tfVect2.transform(X_dev[:, 1]), countVect.transform(X_dev[:, 0])))
+    # X_dev_tfidf = hstack((tfVect1.transform(X_dev[:, 0]), tfVect2.transform(X_dev[:, 0]), tfVect3.transform(X_dev[:, 1])))
     # X_dev_tfidf = hstack((tfVect2.transform(X_dev[:, 0]), tfVect3.transform(X_dev[:, 1])))
-    X_dev_tfidf = hstack((tfVect1.transform(X_dev[:, 0]), tfVect2.transform(X_dev[:, 0]), tfVect3.transform(X_dev[:, 1])))
     # X_dev_tfidf = hstack((tfVect1.transform(X_dev[:, 0]), tfVect2.transform(X_dev[:, 0]), tfVect3.transform(X_dev[:, 1]), countVect.transform(X_dev[:, 1])))
     # X_dev_tfidf = truncatedsvd.transform(X_dev_tfidf)
     # X_dev_tfidf = c_vars.add_feature(X_dev_tfidf, X_dev[:, 2].astype(np.float64))
@@ -212,6 +208,12 @@ def main():
     # X_dev_tfidf = scaler.transform(X_dev_tfidf)
 
     # print (X_train_tfidf)
+    
+    del X_train
+    del df_train
+    del X_dev
+    del df_dev
+    gc.collect()
 
     param_dict = {'max_depth' : [5, 18, 15],
                   'n_estimators' : [120, 300, 500],
@@ -234,12 +236,7 @@ def main():
     param_space, param_to_int_dict = c_vars.get_param_space(param_dict)
 
     for param_list in param_space:
-    # for i in [0.1]:
-    # for i in [1]:
-    # for i in [1.01]:
-    # for i in np.logspace(-3, 0, num = 0 + 3 + 1):
-    # for i in np.logspace(-1, 3, num = 1 + 3 + 1):
-        print (param_list)
+        # print (param_list)
         # clf = RandomForestClassifier(max_depth=param_list[param_to_int_dict['max_depth']], 
                              # n_estimators=param_list[param_to_int_dict['n_estimators']],
                              # min_samples_split=param_list[param_to_int_dict['min_samples_split']],
@@ -253,10 +250,6 @@ def main():
                             # reg_alpha             = param_list[param_to_int_dict['reg_alpha']],
                             # reg_lambda            = param_list[param_to_int_dict['reg_lambda']],
                             # subsample             = param_list[param_to_int_dict['subsample']])
-    # for i in [0.000001, 0.00001, 0.0001, 0.001]:
-    for i in [1.01]:
-    # for i in np.logspace(-3, 0, num = 0 + 3 + 1):
-    # for i in np.logspace(-1, 3, num = 1 + 3 + 1):
         kf = StratifiedKFold(n_splits = 4, shuffle = True)
         # clf = RandomForestClassifier(max_depth=8, n_estimators=100, min_samples_split=5, min_samples_leaf=5, random_state = 42)
         # clf = XGBClassifier(
@@ -290,10 +283,10 @@ def main():
             # X_train_tfidf = X_train_tfidf.toarray()
             # X_dev_tfidf = X_dev_tfidf.toarray()
         # clf = LogisticRegression(penalty = 'l2', C = i)
-        clf = CatBoostClassifier(iterations=50, learning_rate=0.03, depth=4, loss_function='Logloss', class_weights = [1/0.67,1])
-        if type(X_train_tfidf) is not np.ndarray:
-            X_train_tfidf = X_train_tfidf.toarray()
-            X_dev_tfidf = X_dev_tfidf.toarray()
+        # clf = CatBoostClassifier(iterations=50, learning_rate=0.03, depth=4, loss_function='Logloss', class_weights = [1/0.67,1])
+        # if type(X_train_tfidf) is not np.ndarray:
+            # X_train_tfidf = X_train_tfidf.toarray()
+            # X_dev_tfidf = X_dev_tfidf.toarray()
         kf_index = 0
         for train_indices, test_indices in kf.split(X_train_tfidf, y_train_tfidf):
             kf_index += 1
@@ -312,22 +305,34 @@ def main():
             y_pred_train = clf.predict(X_train)
             y_pred_proba_train = clf.predict_proba(X_train)[:,1]
 
-        print ('Train, ' + str(accuracy_score(y_train, y_pred_train)) + ',' + str(roc_auc_score(y_train, y_pred_train)))
-        print ('Test, ' + str(accuracy_score(y_dev, y_pred)) + ',' + str(roc_auc_score(y_dev, y_pred)))
-            print ('Train ' + 'CV ' + str(kf_index) + ' ,' + str(i) + ' ,' + str(accuracy_score(y_train, y_pred_train)) + ',' + str(roc_auc_score(y_train, y_pred_proba_train)))
-            print ('Val   ' + 'CV ' + str(kf_index) + ' ,' + str(i) + ' ,' + str(accuracy_score(y_val, y_pred)) + ',' + str(roc_auc_score(y_val, y_pred_proba)))
+            print ('Train ' + 'CV ' + str(kf_index) + ' ,' + str(param_list) + ' ,' + str(accuracy_score(y_train, y_pred_train)) + ',' + str(roc_auc_score(y_train, y_pred_proba_train)))
+            print ('Val   ' + 'CV ' + str(kf_index) + ' ,' + str(param_list) + ' ,' + str(accuracy_score(y_val, y_pred)) + ',' + str(roc_auc_score(y_val, y_pred_proba)))
 
             # dev set
             y_pred = clf.predict(X_dev_tfidf)
             y_pred_proba = clf.predict_proba(X_dev_tfidf)[:,1]
 
-            print ('Dev   ' + 'CV ' + str(kf_index) + ' ,' + str(i) + ' ,' + str(accuracy_score(y_dev_tfidf, y_pred)) + ',' + str(roc_auc_score(y_dev_tfidf, y_pred_proba)))
+            print ('Dev   ' + 'CV ' + str(kf_index) + ' ,' + str(param_list) + ' ,' + str(accuracy_score(y_dev_tfidf, y_pred)) + ',' + str(roc_auc_score(y_dev_tfidf, y_pred_proba)))
 
+
+        # train on the whole set
         
+        clf.fit(X_train_tfidf, y_train_tfidf)
+        # dev set
+        y_pred_train = clf.predict(X_train_tfidf)
+        y_pred_proba_train = clf.predict_proba(X_train_tfidf)[:,1]
+        y_pred = clf.predict(X_dev_tfidf)
+        y_pred_proba = clf.predict_proba(X_dev_tfidf)[:,1]
+
+        print ('Train ' + str(param_list) + ' ,' + str(accuracy_score(y_train_tfidf, y_pred_train)) + ',' + str(roc_auc_score(y_train_tfidf, y_pred_proba_train)))
+        print ('Dev   ' + str(param_list) + ' ,' + str(accuracy_score(y_dev_tfidf, y_pred)) + ',' + str(roc_auc_score(y_dev_tfidf, y_pred_proba)))
+
+        '''
         df_dev['y_dev'] = y_dev
         df_dev['y_pred'] = y_pred
         df_dev['y_pred_proba'] = y_pred_proba
         df_dev.to_csv('../analysis/dev_analysis.csv', index = False)
+        '''
         '''
         values = X_train_tfidf.max(0).toarray()[0]
         # feature_names = np.hstack((np.array(tfVect1.get_feature_names()), np.array(tfVect2.get_feature_names()), np.array(tfVect3.get_feature_names())))
@@ -350,30 +355,9 @@ def main():
         # print ('top_20')
         # print (top_20)
 
-    
     # delete training data to clean up memory
-    del X_train
     del X_train_tfidf
-    del df_train
-    del X_dev
     del X_dev_tfidf
-    del df_dev
-    del y_train
-    del y_dev
-    del y_pred
-    del y_pred_proba
-    del y_pred_train
-    del y_pred_proba_train
-    gc.collect()
-
-    
-    # delete training data to clean up memory
-    del X_train
-    del X_train_tfidf
-    del df_train
-    del X_dev
-    del X_dev_tfidf
-    del df_dev
     del y_train
     del y_pred
     del y_pred_proba
