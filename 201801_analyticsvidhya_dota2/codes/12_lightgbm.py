@@ -55,7 +55,10 @@ target_cols = ['kda_ratio']
 
 model_list = []
 seed_list = [100 * (x + 1) + 10 * (x + 2) + (x + 3) for x in range(10)]
-for cross_val in range(5):
+
+
+cross_val_history = {'train' : [], 'val' : []}
+for cross_val in range(4):
     # split the data into train and validation sets
     # validation set will comprise of a single rating removed from each
     # of the users
@@ -70,12 +73,15 @@ for cross_val in range(5):
     X_train, X_val = df_train[input_cols].as_matrix(),  df_val[input_cols].as_matrix()
     y_train, y_val = df_train[target_cols].as_matrix().reshape(-1), df_val[target_cols].as_matrix().reshape(-1)
     
-    reg = LGBMRegressor(random_seed=100, learning_rate = 0.1, n_estimators = 1000, \
+    reg = LGBMRegressor(random_seed=100, learning_rate = 0.1, n_estimators = 200, \
                              max_depth = 4, colsample_bytree = 0.8, reg_alpha = 0.1,\
                              min_child_weight = 2, subsample = 0.95, subsample_for_bin = 10)
         
     reg.fit(X_train, y_train)
     model_list.append(reg)
+    cross_val_history['train'].append(mean_squared_error(y_train, reg.predict(X_train)) ** 0.5)
+    cross_val_history['val'].append(mean_squared_error(y_val, reg.predict(X_val)) ** 0.5)
     
-    print(str(cross_val) + ',' + ' Train : ' + str(round(mean_squared_error(y_train, reg.predict(X_train)) ** 0.5, 5)) + \
-          ' , Val : ' + str(round(mean_squared_error(y_val, reg.predict(X_val)) ** 0.5, 5)))
+    print(str(cross_val) + ', Train : ' + str(round(cross_val_history['train'][-1], 5)) + \
+                          ' , Val : ' + str(round(cross_val_history['val'][-1], 5)))
+print(np.mean(cross_val_history['train']), np.mean(cross_val_history['val']))
