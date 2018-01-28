@@ -21,20 +21,54 @@ from scipy import sparse
 from scipy import linalg
 from numpy import dot
 
+# from lightgbm import LGBMClassifier, LGBMRegressor
 # from keras.models import Sequential
 # from keras.layers import Dense
 
 epsilon = 1e-07
+
+predict_on_test = False
+
 num_iterations_user_mat = 1000
 learning_rate_user_mat = 10
 alpha_user_mat = 1
+
 num_iterations_nmf = 1000
 learning_rate_nmf = 0.01
 alpha_nmf = 1
-reg_alpha = 1
+
+num_iterations_nmf_wins = 1000
+learning_rate_nmf_wins = 0.1
+alpha_nmf_wins = 1
+
 n_components_pca = 2
 n_components_nmf = 2
 base_kda = 3000
+
+def nmf(V, k, threshold=1e-5, maxiter=100):
+    
+    d, n = V.shape
+    W = np.random.rand(d, k)
+    H = np.random.rand(k, n)
+    WH = np.dot(W, H)
+    F = (V * np.log(WH) - WH).sum() / (d * n)
+    
+    it_no = 0
+    converged = False
+
+    while (not converged) and it_no <= maxiter:
+        WH = np.dot(W, H)
+        W_new = W * np.dot(V / WH, H.T)
+        W_new = W_new / np.sum(W_new, axis=0, keepdims=True)
+        H_new = H * np.dot((V / WH).T, W).T
+        F_new = (V * np.log(WH) - WH).sum() / (d * n)
+
+        converged = np.abs(F_new - F) <= threshold 
+        W, H = W_new, H_new
+        it_no = it_no + 1
+    
+    return W, H
+
 
 with open('../inputs/hero_id_dict', 'rb') as f:
     hero_id_dict = pickle.load(f)
@@ -75,12 +109,17 @@ num_hero_attr = n_components_pca + 1 # changed to use pca
 
 # create a matrix to store the target vaiable for
 # different user X hero pairs
-p1 = np.percentile(df_train_full['kda_ratio'], 1)
-p99 = np.percentile(df_train_full['kda_ratio'], 99)
+kda_p1                  = np.percentile(df_train_full['kda_ratio'], 1)
+kda_p99                 = np.percentile(df_train_full['kda_ratio'], 99)
 user_hero_kda_raw       = df_train_full.pivot_table(index = 'user_id', columns = 'hero_id', values = 'kda_ratio').fillna(0).as_matrix()
-user_hero_kda_raw       = np.clip(user_hero_kda_raw, a_min = p1, a_max = p99)
+user_hero_kda_raw       = np.clip(user_hero_kda_raw, a_min = kda_p1, a_max = kda_p99)
+
 user_hero_num_games_raw = df_train_full.pivot_table(index = 'user_id', columns = 'hero_id', values = 'num_games').fillna(0).as_matrix()
+
+num_wins_p1             = np.percentile(df_train_full['num_wins'], 1)
+num_wins_p99            = np.percentile(df_train_full['num_wins'], 99)
 user_hero_num_wins_raw  = df_train_full.pivot_table(index = 'user_id', columns = 'hero_id', values = 'num_wins').fillna(0).as_matrix()
+user_hero_num_wins_raw  = np.clip(user_hero_num_wins_raw, a_min = num_wins_p1, a_max = num_wins_p99)
 
 user_hero_exist = np.clip(np.array(user_hero_num_games_raw), a_min = 0, a_max = 1)
 
@@ -95,13 +134,20 @@ for cross_val in range(6,7):
     # split the data into train and validation sets
     # validation set will comprise of a single rating removed from each
     # of the users
-    df_val = df_train_full.sample(frac = 1, replace = False, random_state = seed_list[cross_val])
-    df_val = df_val.drop_duplicates(subset = ['user_id'], keep = 'first')
+    if predict_on_test == False:
+        df_val = df_train_full.sample(frac = 1, replace = False, random_state = seed_list[cross_val])
+        df_val = df_val.drop_duplicates(subset = ['user_id'], keep = 'first')
+    else:
+        df_val = pd.read_csv('../inputs/test1.csv')
+        df_test['user_id'] = df_test['user_id'].apply(lambda x: x - 1)
+        df_test['hero_id'] = df_test['hero_id'].apply(lambda x: hero_id_dict[x])
+
     df_val['kda_ratio_pred'] = 3000
     df_val['user_mean_kda'] = 3000
     df_val['hero_mean_kda'] = 3000
     df_val['kda_user_matrix'] = 3000
     df_val['kda_nmf'] = 3000
+    df_val['num_wins_nmf'] = 3000
     # df_val['kda_svd'] = 3000
 
 
@@ -146,25 +192,45 @@ for cross_val in range(6,7):
             # print (cost, np.sqrt(cost))
 
     # user_matrix = np.linalg.lstsq(hero_matrix, user_hero_kda_raw.T)[0].T
-    cost = np.sum(np.square(np.multiply(is_train, cost_cache)))/(2 * np.sum(is_train))
     kda_user_matrix_pred = np.matmul(user_matrix, hero_matrix.T)
     print ('user_matrix', cost, np.sqrt(cost))
+
+
     # extract user behaviour for kda using nmf
     nmf_user_matrix = np.random.randn(num_users, n_components_nmf)
     nmf_hero_matrix = np.random.randn(num_heroes, n_components_nmf)
     for iteration in range(num_iterations_nmf):
         kda_nmf_pred = np.matmul(nmf_user_matrix, nmf_hero_matrix.T)
         cost_cache = np.multiply(is_train, kda_nmf_pred - user_hero_kda_raw)
-        nmf_user_matrix -= (learning_rate_nmf/np.sum(is_train)) * (np.matmul(cost_cache, nmf_hero_matrix) + alpha_nmf * nmf_user_matrix)
-        nmf_hero_matrix -= (learning_rate_nmf/np.sum(is_train)) * (np.matmul(cost_cache.T, nmf_user_matrix) + alpha_nmf * nmf_hero_matrix)
+        nmf_user_matrix -= (learning_rate_nmf/np.sum(is_train)) * (np.matmul(cost_cache, nmf_hero_matrix) + alpha_nmf_wins * nmf_user_matrix)
+        nmf_hero_matrix -= (learning_rate_nmf/np.sum(is_train)) * (np.matmul(cost_cache.T, nmf_user_matrix) + alpha_nmf_wins * nmf_hero_matrix)
+        nmf_user_matrix = np.clip(nmf_user_matrix, a_min = epsilon, a_max = None)
+        nmf_hero_matrix = np.clip(nmf_hero_matrix, a_min = epsilon, a_max = None)
+
+        cost = np.sum(np.square(cost_cache))/(2 * np.sum(is_train))
+        # if iteration%50 == 0:
+            # print (cost, np.sqrt(cost))
+    
+    kda_nmf_pred = np.matmul(nmf_user_matrix, nmf_hero_matrix.T)
+    print ('nmf', cost, np.sqrt(cost))
+
+    # extract user behaviour for number of wins using nmf
+    nmf_num_wins_user = np.random.randn(num_users, n_components_nmf)
+    nmf_num_wins_hero = np.random.randn(num_heroes, n_components_nmf)
+    for iteration in range(num_iterations_nmf_wins):
+        num_wins_nmf_pred = np.matmul(nmf_num_wins_user, nmf_num_wins_hero.T)
+        cost_cache = np.multiply(is_train, num_wins_nmf_pred - user_hero_num_wins_raw)
+        nmf_num_wins_user -= (learning_rate_nmf_wins/np.sum(is_train)) * (np.matmul(cost_cache, nmf_num_wins_hero) + alpha_nmf * nmf_num_wins_user)
+        nmf_num_wins_hero -= (learning_rate_nmf_wins/np.sum(is_train)) * (np.matmul(cost_cache.T, nmf_num_wins_user) + alpha_nmf * nmf_num_wins_hero)
+        nmf_num_wins_user = np.clip(nmf_num_wins_user, a_min = epsilon, a_max = None)
+        nmf_num_wins_hero = np.clip(nmf_num_wins_hero, a_min = epsilon, a_max = None)
 
         cost = np.sum(np.square(np.multiply(is_train, cost_cache)))/(2 * np.sum(is_train))
         # if iteration%50 == 0:
             # print (cost, np.sqrt(cost))
     
-    cost = np.sum(np.square(np.multiply(is_train, cost_cache)))/(2 * np.sum(is_train))
-    kda_nmf_pred = np.matmul(nmf_user_matrix, nmf_hero_matrix.T)
-    print ('nmf', cost, np.sqrt(cost))
+    num_wins_nmf_pred = np.matmul(nmf_num_wins_user, nmf_num_wins_hero.T)
+    print ('nmf_num_wins', cost, np.sqrt(cost))
 
     '''
     # extract user behaviour using svd
@@ -186,7 +252,7 @@ for cross_val in range(6,7):
                                         cosine_matrix_l2)/cosine_matrix_l2[current_user][0]
 
         cosine_similarities_w_kda = np.hstack((cosine_similarities, user_hero_kda_raw[:, current_hero].reshape(-1, 1)))
-        cosine_similarities_w_kda = cosine_similarities_w_kda[cosine_similarities_w_kda[:, 1] > p1]
+        cosine_similarities_w_kda = cosine_similarities_w_kda[cosine_similarities_w_kda[:, 1] > kda_p1]
         cosine_similarities_w_kda = cosine_similarities_w_kda[np.argsort(cosine_similarities_w_kda[:, 0]), :][-10:-1, :]
 
 
@@ -198,6 +264,7 @@ for cross_val in range(6,7):
         df_val.iloc[i, 8]  = kda_hero_mean[current_hero]
         df_val.iloc[i, 9]  = kda_user_matrix_pred[current_user][current_hero]
         df_val.iloc[i, 10] = kda_nmf_pred[current_user][current_hero]
+        df_val.iloc[i, 11] = num_wins_nmf_pred[current_user][current_hero]
         # df_val.iloc[i, 11] = kda_svd_pred[current_user][current_hero]
 
         error_curr = (df_val.iloc[i, 5] - df_val.iloc[i, 6])
@@ -211,7 +278,8 @@ for cross_val in range(6,7):
     # fit a linear regression on the 
     linear_reg = LinearRegression()
     scaler = StandardScaler()
-    X_train = df_val[['num_games', 'kda_ratio_pred', 'user_mean_kda', 'hero_mean_kda', 'kda_user_matrix', 'kda_nmf']].as_matrix()
+    # X_train = df_val[['num_games', 'kda_ratio_pred', 'user_mean_kda', 'hero_mean_kda', 'kda_user_matrix', 'kda_nmf', 'num_wins_nmf']].as_matrix()
+    X_train = df_val[['num_games', 'user_mean_kda', 'hero_mean_kda', 'kda_nmf', 'num_wins_nmf']].as_matrix()
     y_train = df_val['kda_ratio'].as_matrix()
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size = 0.3)
     # X_train = scaler.fit_transform(X_train)
@@ -226,10 +294,18 @@ for cross_val in range(6,7):
     df_val.to_csv('../inputs/temp.csv', index = False)
 
     '''
+    lgbm = LGBMRegressor(random_seed=100, learning_rate = 0.01, n_estimators = 100, \
+                             max_depth = 2, colsample_bytree = 0.8, reg_alpha = 0.1,\
+                             min_child_weight = 2, subsample = 0.95, subsample_for_bin = 10)
+    lgbm.fit(X_train, y_train.reshape(-1))
+    error = np.sqrt(mean_squared_error(lgbm.predict(X_train), y_train.reshape(-1)))
+    print ('lgbm', error)
+    '''
+    '''
     # try to fit a simple neural network on the data
     X_train = scaler.fit_transform(X_train)
     model = Sequential()
-    model.add(Dense(7, input_dim = 7, activation = 'relu'))
+    model.add(Dense(7, input_dim = 6, activation = 'relu'))
     model.add(Dense(14, activation = 'relu'))
     model.add(Dense(1, activation = 'linear'))
     model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mean_squared_error'])
@@ -238,19 +314,5 @@ for cross_val in range(6,7):
     print ('nn', error)
     '''
 
-sys.exit()
-
-# make the predictions on the test set
-df_test = pd.read_csv('../inputs/test1.csv')
-df_test['user_id'] = df_test['user_id'].apply(lambda x: x - 1)
-df_test['hero_id'] = df_test['hero_id'].apply(lambda x: hero_id_dict[x])
-
-df_test['kda_ratio'] = kda_mean
-kda_pred_np = sess.run(kda_pred)
-user_matrix_num_games_np = sess.run(user_matrix_num_games)
-for model in model_list:
-    kda_pred = np.matmul(np.matmul(model['user_matrix'], model['weight_matrix'], model['hero_feature_matrix']))
-    for i in range(len(df_test)):
-        df_test.iloc[i, 4] += kda_pred[df_test.iloc[i, 0]][df_test.iloc[i, 1]] * df_test.iloc[i, 3] * model['kda_std'] + model['kda_mean']
-df_test['kda_ratio'] /= len(model_list)
-df_test[['id', 'kda_ratio']].to_csv('../submissions/submissions_20180127_1636_mf.csv', index=False)
+if predict_on_test == True:
+    df_test[['id', 'kda_ratio']].to_csv('../submissions/submissions_20180127_1636_mf.csv', index=False)
