@@ -27,7 +27,11 @@ from numpy import dot
 
 epsilon = 1e-07
 
-predict_on_test = False
+predict_on_test = True
+cross_val_start = 6
+num_cross_val = 10
+
+use_nearest_neighbors = False
 
 num_iterations_user_mat = 1000
 learning_rate_user_mat = 10
@@ -126,7 +130,8 @@ user_hero_exist = np.clip(np.array(user_hero_num_games_raw), a_min = 0, a_max = 
 model_list = []
 # start the cross validation loop, use 10 cross validations
 seed_list = [100 * (x + 1) + 10 * (x + 2) + (x + 3) for x in range(100)]
-for cross_val in range(6,7):
+first_cross_val = True
+for cross_val in range(cross_val_start, num_cross_val + cross_val_start):
     # define two numpy arrays, one stores 1 at the combinations of 
     # train user X hero, and other stores for val
     is_val   = np.zeros((num_users, num_heroes))
@@ -139,15 +144,25 @@ for cross_val in range(6,7):
         df_val = df_val.drop_duplicates(subset = ['user_id'], keep = 'first')
     else:
         df_val = pd.read_csv('../inputs/test1.csv')
-        df_test['user_id'] = df_test['user_id'].apply(lambda x: x - 1)
-        df_test['hero_id'] = df_test['hero_id'].apply(lambda x: hero_id_dict[x])
+        df_val['user_id']   = df_val['user_id'].apply(lambda x: x - 1)
+        df_val['hero_id']   = df_val['hero_id'].apply(lambda x: hero_id_dict[x])
+        df_val['num_wins']  = 3000 # added to make the num of columns same
+        df_val['kda_ratio'] = 3000 # added to make the num of columns same
+        if first_cross_val == True:
+            y_test_pred = np.zeros((len(df_val), 1))
+            first_cross_val = False
 
-    df_val['kda_ratio_pred'] = 3000
-    df_val['user_mean_kda'] = 3000
-    df_val['hero_mean_kda'] = 3000
-    df_val['kda_user_matrix'] = 3000
-    df_val['kda_nmf'] = 3000
-    df_val['num_wins_nmf'] = 3000
+
+    df_val['drop'] = 1
+    df_train = pd.merge(left = df_train_full, right = df_val[['id', 'drop']], how = 'left', on = 'id')
+    df_train = df_train.loc[df_train['drop'] != 1]
+
+    df_train.drop('drop', axis = 1, inplace = True)
+    df_val.drop('drop', axis = 1, inplace = True)
+
+    for col in ['kda_ratio_pred','user_mean_kda','hero_mean_kda','kda_user_matrix','kda_nmf','num_wins_nmf']:
+        df_train[col] = 3000
+        df_val[col]   = 3000
     # df_val['kda_svd'] = 3000
 
 
@@ -240,26 +255,40 @@ for cross_val in range(6,7):
     print ('svd', cost, np.sqrt(cost))
     '''
 
-    error = 0
-    # for i in range(10):
+    if use_nearest_neighbors == True:
+        error = 0
+        # for i in range(10):
+        for i in range(len(df_val)):
+            current_user = df_val.iloc[i, 0]
+            current_hero = df_val.iloc[i, 1]
+            # print ('current user is %d and current hero is %d'% (current_user, current_hero))
+
+            # user_hero_kda_wo_user = np.delete(user_hero_kda, (current_user), axis = 0)
+            cosine_similarities = np.divide(np.sum(np.multiply(cosine_matrix[current_user, :].reshape(1, -1), cosine_matrix), axis = 1).reshape(-1, 1),\
+                                            cosine_matrix_l2)/cosine_matrix_l2[current_user][0]
+
+            cosine_similarities_w_kda = np.hstack((cosine_similarities, user_hero_kda_raw[:, current_hero].reshape(-1, 1)))
+            cosine_similarities_w_kda = cosine_similarities_w_kda[cosine_similarities_w_kda[:, 1] > kda_p1]
+            cosine_similarities_w_kda = cosine_similarities_w_kda[np.argsort(cosine_similarities_w_kda[:, 0]), :][-10:-1, :]
+
+
+            df_val.iloc[i, 6] = np.sum(np.multiply(cosine_similarities_w_kda[:, 0], cosine_similarities_w_kda[:, 1]))/\
+                                (np.sum(cosine_similarities_w_kda[:, 0]) + epsilon)
+            
+            # store the means at user and group levels
+
+            error_curr = (df_val.iloc[i, 5] - df_val.iloc[i, 6])
+            error += error_curr ** 2
+            # print ('Currently Evaluated %4dth row and error is %4.2f, current actual kda %5d, pred kda %5d' % (i, error_curr, df_val.iloc[i, 5], df_val.iloc[i, 6]))
+
+        cost = np.sqrt(error/len(df_val))
+        # print ('Val Iter : ' + str(cross_val))
+        print ('Val Iter : ' + str(cross_val) + ', Val : ' + str(round(cost, 2)))
+    
+    
     for i in range(len(df_val)):
         current_user = df_val.iloc[i, 0]
         current_hero = df_val.iloc[i, 1]
-        # print ('current user is %d and current hero is %d'% (current_user, current_hero))
-
-        # user_hero_kda_wo_user = np.delete(user_hero_kda, (current_user), axis = 0)
-        cosine_similarities = np.divide(np.sum(np.multiply(cosine_matrix[current_user, :].reshape(1, -1), cosine_matrix), axis = 1).reshape(-1, 1),\
-                                        cosine_matrix_l2)/cosine_matrix_l2[current_user][0]
-
-        cosine_similarities_w_kda = np.hstack((cosine_similarities, user_hero_kda_raw[:, current_hero].reshape(-1, 1)))
-        cosine_similarities_w_kda = cosine_similarities_w_kda[cosine_similarities_w_kda[:, 1] > kda_p1]
-        cosine_similarities_w_kda = cosine_similarities_w_kda[np.argsort(cosine_similarities_w_kda[:, 0]), :][-10:-1, :]
-
-
-        df_val.iloc[i, 6] = np.sum(np.multiply(cosine_similarities_w_kda[:, 0], cosine_similarities_w_kda[:, 1]))/\
-                            (np.sum(cosine_similarities_w_kda[:, 0]) + epsilon)
-        
-        # store the means at user and group levels
         df_val.iloc[i, 7]  = kda_mean[current_user]
         df_val.iloc[i, 8]  = kda_hero_mean[current_hero]
         df_val.iloc[i, 9]  = kda_user_matrix_pred[current_user][current_hero]
@@ -267,31 +296,42 @@ for cross_val in range(6,7):
         df_val.iloc[i, 11] = num_wins_nmf_pred[current_user][current_hero]
         # df_val.iloc[i, 11] = kda_svd_pred[current_user][current_hero]
 
-        error_curr = (df_val.iloc[i, 5] - df_val.iloc[i, 6])
-        error += error_curr ** 2
-        # print ('Currently Evaluated %4dth row and error is %4.2f, current actual kda %5d, pred kda %5d' % (i, error_curr, df_val.iloc[i, 5], df_val.iloc[i, 6]))
-
-    cost = np.sqrt(error/len(df_val))
-    # print ('Val Iter : ' + str(cross_val))
-    print ('Val Iter : ' + str(cross_val) + ', Val : ' + str(round(cost, 2)))
+    for i in range(len(df_train)):
+        current_user = df_train.iloc[i, 0]
+        current_hero = df_train.iloc[i, 1]
+        df_train.iloc[i, 7]  = kda_mean[current_user]
+        df_train.iloc[i, 8]  = kda_hero_mean[current_hero]
+        df_train.iloc[i, 9]  = kda_user_matrix_pred[current_user][current_hero]
+        df_train.iloc[i, 10] = kda_nmf_pred[current_user][current_hero]
+        df_train.iloc[i, 11] = num_wins_nmf_pred[current_user][current_hero]
+        # df_train.iloc[i, 11] = kda_svd_pred[current_user][current_hero]
     
+
     # fit a linear regression on the 
     linear_reg = LinearRegression()
     scaler = StandardScaler()
-    # X_train = df_val[['num_games', 'kda_ratio_pred', 'user_mean_kda', 'hero_mean_kda', 'kda_user_matrix', 'kda_nmf', 'num_wins_nmf']].as_matrix()
-    X_train = df_val[['num_games', 'user_mean_kda', 'hero_mean_kda', 'kda_nmf', 'num_wins_nmf']].as_matrix()
-    y_train = df_val['kda_ratio'].as_matrix()
-    # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size = 0.3)
-    # X_train = scaler.fit_transform(X_train)
-    # X_test = scaler.transform(X_test)
+    # input_cols = ['num_games', 'kda_ratio_pred', 'user_mean_kda', 'hero_mean_kda', 'kda_user_matrix', 'kda_nmf', 'num_wins_nmf']
+    input_cols = ['num_games', 'user_mean_kda', 'hero_mean_kda', 'kda_nmf', 'num_wins_nmf']
+    
+    X_train, X_val = df_train[input_cols].as_matrix(), df_val[input_cols].as_matrix()
+    y_train        = df_train['kda_ratio'].as_matrix()
+    
     linear_reg.fit(X_train, y_train)
     error = np.sqrt(mean_squared_error(linear_reg.predict(X_train), y_train))
-    print ('linear_reg', error)
+    print ('linear_reg train', error)
+
+    if predict_on_test == False:
+        y_val = df_val['kda_ratio'].as_matrix()
+        error = np.sqrt(mean_squared_error(linear_reg.predict(X_val), y_val))
+        print ('linear_reg val', error)
+    else:
+        # print (y_test_pred.shape, linear_reg.predict(X_val).reshape(-1, 1).shape)
+        y_test_pred += linear_reg.predict(X_val).reshape(-1, 1)
     # error = np.sqrt(mean_squared_error(linear_reg.predict(X_test), y_test))
     # print (error)
     # print (scaler.mean_)
     print (linear_reg.coef_, linear_reg.intercept_)
-    df_val.to_csv('../inputs/temp.csv', index = False)
+    # df_val.to_csv('../inputs/temp.csv', index = False)
 
     '''
     lgbm = LGBMRegressor(random_seed=100, learning_rate = 0.01, n_estimators = 100, \
@@ -315,4 +355,5 @@ for cross_val in range(6,7):
     '''
 
 if predict_on_test == True:
-    df_test[['id', 'kda_ratio']].to_csv('../submissions/submissions_20180127_1636_mf.csv', index=False)
+    df_val['kda_ratio'] = y_test_pred/num_cross_val
+    df_val[['id', 'kda_ratio']].to_csv('../submissions/submissions_20180129_1315_cf.csv', index=False)
