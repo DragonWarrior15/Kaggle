@@ -181,6 +181,8 @@ df_input = df_input.drop(['Agency', 'SKU'], axis = 1)
 X = df_input[input_cols].as_matrix()
 y = df_input['target'].as_matrix()
 
+new_year_index = input_cols.index('New Year')
+
 '''
 ## code for grid search
 parameters = {'learning_rate':[0.01, 0.05, 0.1],
@@ -214,13 +216,30 @@ for train_indices, test_indices in kf.split(X):
     model_list.append(model)
     kf_index += 1
     
-    print(str(kf_index) + ',' + ' Train : ' + str(round(competition_metric(y_train, model.predict(X_train)), 5)) + \
-          ' , Test : ' + str(round(competition_metric(y_test, model.predict(X_test)), 5)))
+    print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train, model.predict(X_train)), '.5f')) + \
+          ' , Test : ' + str(format(competition_metric(y_test, model.predict(X_test)), '.5f')))
+    
     # print the errors for Jan months
-    # print(str(kf_index) + ',' + ' Train : ' + str(round(competition_metric(y_train, model.predict(X_train)), 5)) + \
-          # ' , Test : ' + str(round(competition_metric(y_test, model.predict(X_test)), 5)))
+    train_jan_filter = X_train[:, new_year_index] == 1
+    test_jan_filter = X_test[:, new_year_index] == 1
+
+    print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train[train_jan_filter], model.predict(X_train[train_jan_filter])), '.5f')) + \
+          ' , Test : ' + str(format(competition_metric(y_test[test_jan_filter], model.predict(X_test[test_jan_filter])),'.5f')) + \
+          ', Train Entries : ' + str(train_jan_filter.sum()) + ', Test Entries : ' + str(test_jan_filter.sum()))
 
 df_feature_importance = pd.DataFrame(list(zip([x for x in input_cols if x != 'target'], \
                                               model.feature_importances_)),\
                                      columns = ['column_name', 'feature_importance'])
 df_feature_importance.to_csv('temp2.csv', index = False)
+
+
+## prepare the submission
+df_submit = feature_prep(201801).loc[:, :]
+df_submit['Volume'] = np.mean([clf.predict(df_submit[input_cols].as_matrix()) for clf in model_list], axis = 0)
+df_submit = df_submit[['Agency', 'SKU', 'Volume']]
+
+submission_file = pd.read_csv('../inputs/volume_forecast.csv')
+submission_file = submission_file.drop(['Volume'], axis = 1)
+submission_file = pd.merge(left = submission_file, right = df_submit, on = ['Agency', 'SKU'], how = 'left')
+submission_file.fillna(0, inplace = True)
+submission_file.to_csv('../submissions/submit_lgbm_20180225_0000.csv', index = False)
