@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import sys
 
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
@@ -12,8 +13,153 @@ from sklearn.metrics import r2_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV, KFold
 from scipy import stats
 
+from input_cols_list import input_cols
+
 def competition_metric(y_true, y_forecast):
-    return(1 - np.sum(np.abs(y_true, y_forecast) / y_true))
+    return(1 - (np.sum(np.abs(y_true - y_forecast)) / np.sum(y_true)))
+
+def competition_scorer(estimator, X, y_true):
+    return(1 - (np.sum(np.abs(y_true - estimator.predict(X))) / np.sum(y_true)))
+
+def month_adder(month, diff):
+    ## add integral month differences to months of the form
+    ## 201701, 201712 etc
+    ## input -> 201712, 10
+    ## output -> 201810
+    diff = int(diff)
+    delta = 1 if diff > 0 else -1
+    while diff != 0:
+        month += delta
+        diff += -1 * delta
+
+        if 1 <= month % 100 and month % 100 <= 12:
+            pass
+        elif month % 100 == 13:
+            month = ((month // 100) + 1) * 100 + 1
+        else:
+            month = ((month // 100) - 1) * 100 + 12
+    return month
+
+# get a list of all months for iteration
+var_to_group = [['Agency', 'SKU'],
+                ['Agency'],
+                ['SKU']]
+agg_list = [[np.sum],
+            [np.sum, np.mean, np.max, np.min, np.std],
+            [np.mean, np.max, np.min, np.std]]
+
+def feature_prep(month):
+    # start preparing the features, current month will be the target month
+    # and features will be historical time window trends
+    df_targets = []
+    if month < 201401:
+        print ('month should be greater than 201401 to prepare 12 month features')
+        return (None)
+
+    end_month = month
+    
+    # for month in all_month_list:
+    df_temp_inputs = pd.DataFrame()
+    for time in [1, 2, 3, 4, 6, 12]:
+        
+        start_month = month_adder(end_month, -1 * time)
+
+        # get Agency X SKU, Agency and SKU level historical information
+        for index, var_list in enumerate(var_to_group):
+            # a second for loop is implemented especially for time = 2
+            # to get the values in only that month
+            for time_diff in [0, 1] if time == 2 else [0]:
+
+                agg_list_index = 0 if time == 1 or (time == 2 and time_diff == 1) else 1
+
+                if time == 2 and time_diff == 1:
+                    df_temp = df.loc[(end_month - 2 <= df['YearMonth']) & (df['YearMonth'] <= end_month - 2), :]
+                else:                
+                    df_temp = df.loc[(start_month <= df['YearMonth']) & (df['YearMonth'] < end_month), :]                
+                df_temp = df_temp.groupby(var_list).agg({'Volume':agg_list[agg_list_index], 'Price':agg_list[agg_list_index],
+                                                             'Sales':agg_list[agg_list_index]})
+                if time == 2 and time_diff == 1:
+                    new_col_names =  var_list + ['_'.join(['_'.join(var_list + [str(time)] + ['1'])] + list(x)) for x in (df_temp.columns.ravel())]
+                else:
+                    new_col_names =  var_list + ['_'.join(['_'.join(var_list + [str(time)])] + list(x)) for x in (df_temp.columns.ravel())]
+                df_temp.reset_index(inplace = True)
+                df_temp.columns = new_col_names
+
+                if index == 0 and time == 1:
+                    df_temp_inputs = df_temp.loc[:, :]
+                else:
+                    df_temp_inputs = pd.merge(left = df_temp_inputs, right = df_temp, on = var_list, how = 'left')
+
+        agg_list_index = 0 if time == 1 else 1
+
+        # get the industry level volume features
+        df_temp = df_ind.loc[(start_month <= df_ind['YearMonth']) & (df_ind['YearMonth'] < end_month), :]
+        df_temp['dummy'] = 1
+        df_temp = df_temp.groupby('dummy').agg({'Soda_Volume':agg_list[agg_list_index], 'Industry_Volume':agg_list[agg_list_index]})
+        new_col_names = ['dummy'] + ['_'.join(['_'.join(['industry'] + [str(time)])] + list(x)) for x in (df_temp.columns.ravel())]
+        df_temp.reset_index(inplace = True)
+        df_temp.columns = new_col_names
+
+
+        for col in df_temp.columns.tolist():
+            if col != 'dummy':
+                df_temp_inputs[col] =  df_temp.loc[df_temp['dummy'] == 1, col].values[0]
+
+    
+        agg_list_index = 0 if time == 1 else 2
+        
+        # get the Agency level weather features
+        df_temp = df_weather.loc[(start_month <= df_weather['YearMonth']) & (df_weather['YearMonth'] < end_month), :]
+        df_temp = df_temp.groupby(var_to_group[1]).agg({'Avg_Max_Temp':agg_list[agg_list_index]})
+        new_col_names = var_to_group[1] + ['_'.join(['_'.join(var_to_group[1] + [str(time)])] + list(x)) for x in (df_temp.columns.ravel())]
+        df_temp.reset_index(inplace = True)
+        df_temp.columns = new_col_names
+        df_temp_inputs = pd.merge(left = df_temp_inputs, right = df_temp, on = var_to_group[1], how = 'left')
+
+    
+    # add indicators from the calendar table for the target month
+    for col in df_calendar.columns.tolist():
+        if col != 'YearMonth':
+            df_temp_inputs[col] =  df_calendar.loc[df_calendar['YearMonth'] == end_month, col].values[0]
+
+    # add the target
+    df_temp = df.loc[df['YearMonth'] == end_month, ['Agency', 'SKU', 'Volume']]
+    df_temp = df_temp.rename(columns = {'Volume':'target'})
+    df_temp_inputs = pd.merge(left = df_temp_inputs, right = df_temp, on = ['Agency', 'SKU'], how = 'left')
+
+    # remove the rows where the target is zero
+    if month == 201801:
+        pass
+    else:
+        df_temp_inputs = df_temp_inputs.loc[df_temp_inputs['target'] > 0, :]
+
+    return (df_temp_inputs)
+
+def cross_val(X, y, model, cv = 3):
+    model_list = []
+    kf = KFold(n_splits = cv, shuffle = True)
+    kf_index = 0
+    for train_indices, test_indices in kf.split(X):
+        X_train, X_test = X[train_indices], X[test_indices]
+        y_train, y_test = y[train_indices], y[test_indices]
+                 
+        model.fit(X_train, y_train)
+        model_list.append(model)
+        kf_index += 1
+        
+        print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train, model.predict(X_train)), '.5f')) + \
+              ' , Test : ' + str(format(competition_metric(y_test, model.predict(X_test)), '.5f')))
+        
+        # print the errors for Jan months
+        train_jan_filter = X_train[:, new_year_index] == 1
+        test_jan_filter = X_test[:, new_year_index] == 1
+
+        print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train[train_jan_filter], model.predict(X_train[train_jan_filter])), '.5f')) + \
+              ' , Test : ' + str(format(competition_metric(y_test[test_jan_filter], model.predict(X_test[test_jan_filter])),'.5f')) + \
+              ', Train Entries : ' + str(train_jan_filter.sum()) + ', Test Entries : ' + str(test_jan_filter.sum()))
+
+    return (model_list)
+
 
 ## read the inputs
 df_price       = pd.read_csv('../inputs/price_sales_promotion.csv')
@@ -24,101 +170,62 @@ df_hist_volume = pd.read_csv('../inputs/historical_volume.csv')
 df_calendar    = pd.read_csv('../inputs/event_calendar.csv')
 df_weather     = pd.read_csv('../inputs/weather.csv')
 
+df_demo['Total_Income_2017'] = df_demo['Avg_Population_2017'] * df_demo['Avg_Yearly_Household_Income_2017']
+df_demo['Avg_Income_2017'] = df_demo['Total_Income_2017'] / np.sum(df_demo['Total_Income_2017'])
+df_demo['Avg_Population_2017'] = df_demo['Avg_Population_2017'] / np.sum(df_demo['Avg_Population_2017'])
+df_demo = df_demo[['Agency', 'Avg_Population_2017', 'Avg_Income_2017']]
+
+df_calendar = df_calendar.drop(['Regional Games ', 'FIFA U-17 World Cup', 'Football Gold Cup'], axis = 1)
+
 ## join the relevant inputs
 df = pd.merge(left = df_price, right = df_hist_volume, on = ['Agency', 'SKU', 'YearMonth'], how = 'inner')
 
-## as a first step, try to predict the volume for the month 201501, 201601 and 201701 using the historical data
-df_target = df.loc[df['YearMonth'].isin([201401, 201501, 201601, 201701]), ['Agency', 'SKU', 'YearMonth', 'Volume']].sort_values(by = ['Agency', 'SKU', 'YearMonth'])
+# df = pd.merge(left = df, right = df_demo, on = ['Agency'])
+# df = pd.merge(left = df, right = df_weather, on = ['Agency', 'YearMonth'], how = 'inner')
+# df = pd.merge(left = df, right = df_calendar, on = ['YearMonth'])
 
-## prepare the input features at Agency X SKU X time
-# separate the dataframe into three inputs, for target years 2015, 2016 and 2017
+df_ind = pd.merge(left = df_ind_sales, right = df_ind_volume, on = ['YearMonth'])
+
+# print (df.columns.values)
+
+# start preparing the input table
+
+all_month_list = sorted(df['YearMonth'].unique().tolist())
 df_input = []
-var_to_group = ['Agency', 'SKU']
-agg_list = [np.mean, np.sum, np.var, np.max, np.min]
-for i in [4, 5, 6, 7]:
-    df_temp_input = []
-    end_month = 201001 + i * 100
-    for time in [1, 2, 3, 6, 12]:
+print ('Preparing input')
+for month in all_month_list:
+    if 201401 <= month and month <= 201712:
+        # print (month)
+        df_input.append(feature_prep(month).loc[:, :])
+print ('Inputs prepared')
 
-        if time == 12:
-            start_month = 201001 + (i - 1) * 100
-        elif time == 24:
-            start_month = 201001 + (i - 2) * 100
-        else:
-            start_month = 201000 + (i - 1) * 100 + (12 - time - 1)
+df_input = pd.concat(df_input)
+print (len(df_input))
+print (df_input.columns)
+df_input.to_csv('temp10.csv', index = False)
+df_input.fillna(0, inplace = True)
 
-        df_temp = df.loc[((start_month) <= df['YearMonth']) & (df['YearMonth'] < end_month), :]
+# input_cols = [x for x in df_input.columns.tolist() if x not in ['target', 'Agency', 'SKU']]
+new_year_index = input_cols.index('New Year')
 
-        df_temp = df_temp.groupby(var_to_group).agg({'Volume':agg_list, 'Price':agg_list,
-                                                     'Sales':agg_list})
-        new_col_names =  var_to_group + ['_'.join(['_'.join(var_to_group + [str(time)])] + list(x)) for x in (df_temp.columns.ravel())]
-        df_temp.reset_index(inplace = True)
-        df_temp.columns = new_col_names
+X = df_input[input_cols].as_matrix()
+y = df_input['target'].as_matrix()
 
-        df_temp_input.append(df_temp.loc[:,:])
 
-    df_temp = df_temp_input[0].loc[:, :]
-    for j in range(1, len(df_temp_input)):
-        df_temp = pd.merge(left = df_temp, right = df_temp_input[j], on = var_to_group, how = 'inner')
-    df_input.append(df_temp.loc[:, :])
-    df_input[-1]['YearMonth'] = end_month
+model = LinearRegression(fit_intercept = True, normalize = True)
+model_list = cross_val(X, y, model, 4)
 
-cols_to_use = ['Agency_SKU_1_Volume_mean',
-               'Agency_SKU_1_Volume_sum',
-               'Agency_SKU_2_Volume_mean',
-               'Agency_SKU_2_Volume_sum',
-               'Agency_SKU_3_Volume_mean',
-               'Agency_SKU_3_Volume_sum',
-               'Agency_SKU_1_Volume_amin',
-               'Agency_SKU_12_Volume_mean',
-               'Agency_SKU_12_Volume_sum',
-               'Agency_SKU_6_Volume_mean',
-               'Agency_SKU_6_Volume_sum',
-               'Agency_SKU_1_Volume_amax',
-               'Agency_SKU_3_Volume_amax',
-               'Agency_SKU_2_Volume_amax',
-               'Agency_SKU_2_Volume_amin',
-               'Agency_SKU_12_Volume_amin',
-               'Agency_SKU_3_Volume_amin',
-               'Agency_SKU_6_Volume_amax',
-               'Agency_SKU_6_Volume_amin',
-               'Agency_SKU_12_Volume_amax',
-               'YearMonth']
+## error analysis
+# df_input['prediction'] = np.mean([clf.predict(df_input[input_cols].as_matrix()) for clf in model_list], axis = 0)
+# df_input[['Agency', 'SKU', 'target', 'prediction']].to_csv('temp4.csv', index = False)
 
-X = pd.concat(df_input).sort_values(by = ['Agency', 'SKU', 'YearMonth'])[cols_to_use]
-# X.drop(['Agency', 'SKU'], axis = 1, inplace = True)
+## prepare the submission
+df_submit = feature_prep(201801).loc[:, :].fillna(0)
+df_submit['Volume'] = np.clip(np.mean([clf.predict(df_submit[input_cols].as_matrix()) for clf in model_list], axis = 0), a_min = 0, a_max = None)
+df_submit = df_submit[['Agency', 'SKU', 'Volume']]
 
-X_train = X.loc[X['YearMonth'].isin([201401, 201501, 201601]), :]
-X_test  = X.loc[X['YearMonth'].isin([201701]), :]
-
-X_train = X_train.drop('YearMonth', axis = 1).as_matrix()
-X_test  = X_test.drop('YearMonth', axis = 1).as_matrix()
-
-y_train = df_target.loc[df_target['YearMonth'].isin([201401, 201501, 201601]), 'Volume'].as_matrix()
-y_test  = df_target.loc[df_target['YearMonth'].isin([201701]), 'Volume'].as_matrix()
-
-## standard scale the values
-scaler = StandardScaler()
-scaler.fit(X_train)
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
-
-## train the model
-model = LinearRegression(fit_intercept = True, normalize = False, n_jobs = -1)
-model.fit(X_train, y_train)
-
-print (X.columns)
-for i in range(X_train.shape[1]):
-    print (X.columns.tolist()[i], np.corrcoef(X_train[:, i], y_train)[0][1])
-print (model.coef_)
-print (model.intercept_)
-
-y_train_pred = model.predict(X_train)
-print (competition_metric(y_train_pred, y_train))
-
-y_test_pred = model.predict(X_test)
-print (competition_metric(y_test_pred, y_test))
-
-## only using the january months gives very poor performance, possible
-## reasons could be not modelling seasonality and very less no of data points
-## compared to the available dimensions
+submission_file = pd.read_csv('../inputs/volume_forecast.csv')
+submission_file = submission_file.drop(['Volume'], axis = 1)
+submission_file = pd.merge(left = submission_file, right = df_submit, on = ['Agency', 'SKU'], how = 'left')
+submission_file.fillna(0, inplace = True)
+submission_file.to_csv('../submissions/submit_lin_reg_20180225_0252.csv', index = False)

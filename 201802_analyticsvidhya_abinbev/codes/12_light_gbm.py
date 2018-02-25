@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import sys
 
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
@@ -63,13 +64,16 @@ def feature_prep(month):
     df_temp_inputs = pd.DataFrame()
     for time in [1, 2, 3, 4, 6, 12]:
         
-        agg_list_index = 0 if time == 1 else 1
         start_month = month_adder(end_month, -1 * time)
 
+        # get Agency X SKU, Agency and SKU level historical information
         for index, var_list in enumerate(var_to_group):
             # a second for loop is implemented especially for time = 2
             # to get the values in only that month
             for time_diff in [0, 1] if time == 2 else [0]:
+                
+                agg_list_index = 0 if time == 1 or (time == 2 and time_diff == 1) else 1
+                
                 if time == 2 and time_diff == 1:
                     df_temp = df.loc[(end_month - 2 <= df['YearMonth']) & (df['YearMonth'] <= end_month - 2), :]
                 else:                
@@ -80,6 +84,7 @@ def feature_prep(month):
                     new_col_names =  var_list + ['_'.join(['_'.join(var_list + [str(time)] + ['1'])] + list(x)) for x in (df_temp.columns.ravel())]
                 else:
                     new_col_names =  var_list + ['_'.join(['_'.join(var_list + [str(time)])] + list(x)) for x in (df_temp.columns.ravel())]
+
                 df_temp.reset_index(inplace = True)
                 df_temp.columns = new_col_names
 
@@ -88,7 +93,9 @@ def feature_prep(month):
                 else:
                     df_temp_inputs = pd.merge(left = df_temp_inputs, right = df_temp, on = var_list, how = 'left')
 
-
+        
+        agg_list_index = 0 if time == 1 else 1
+        
         # get the industry level volume features
         df_temp = df_ind.loc[(start_month <= df_ind['YearMonth']) & (df_ind['YearMonth'] < end_month), :]
         df_temp['dummy'] = 1
@@ -102,9 +109,7 @@ def feature_prep(month):
             if col != 'dummy':
                 df_temp_inputs[col] =  df_temp.loc[df_temp['dummy'] == 1, col].values[0]
 
-    
         agg_list_index = 0 if time == 1 else 2
-
         
         # get the Agency level weather features
         df_temp = df_weather.loc[(start_month <= df_weather['YearMonth']) & (df_weather['YearMonth'] < end_month), :]
@@ -133,6 +138,30 @@ def feature_prep(month):
 
     return (df_temp_inputs)
 
+def cross_val(X, y, model, cv = 3):
+    model_list = []
+    kf = KFold(n_splits = cv, shuffle = True)
+    kf_index = 0
+    for train_indices, test_indices in kf.split(X):
+        X_train, X_test = X[train_indices], X[test_indices]
+        y_train, y_test = y[train_indices], y[test_indices]
+                 
+        model.fit(X_train, y_train)
+        model_list.append(model)
+        kf_index += 1
+        
+        print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train, model.predict(X_train)), '.5f')) + \
+              ' , Test : ' + str(format(competition_metric(y_test, model.predict(X_test)), '.5f')))
+        
+        # print the errors for Jan months
+        train_jan_filter = X_train[:, new_year_index] == 1
+        test_jan_filter = X_test[:, new_year_index] == 1
+
+        print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train[train_jan_filter], model.predict(X_train[train_jan_filter])), '.5f')) + \
+              ' , Test : ' + str(format(competition_metric(y_test[test_jan_filter], model.predict(X_test[test_jan_filter])),'.5f')) + \
+              ', Train Entries : ' + str(train_jan_filter.sum()) + ', Test Entries : ' + str(test_jan_filter.sum()))
+
+    return (model_list)
 
 
 ## read the inputs
@@ -166,10 +195,12 @@ df_ind = pd.merge(left = df_ind_sales, right = df_ind_volume, on = ['YearMonth']
 
 all_month_list = sorted(df['YearMonth'].unique().tolist())
 df_input = []
+print ('Preparing input')
 for month in all_month_list:
     if 201401 <= month and month <= 201712:
-        print (month)
+        # print (month)
         df_input.append(feature_prep(month).loc[:, :])
+print ('Inputs prepared')
 
 df_input = pd.concat(df_input)
 print (len(df_input))
@@ -191,48 +222,24 @@ parameters = {'learning_rate':[0.01, 0.05, 0.1],
               'subsample':[0.8, 0.9],
               'min_child_weight':[1, 2, 5],
               'random_seed':[42]}
-
 model = LGBMRegressor()
 grid_search = GridSearchCV(model, parameters, scoring = competition_scorer, cv = 3)
-
 grid_search.fit(X, y)
-
 grid_search_results = pd.DataFrame(grid_search.cv_results_)
 grid_search_results.to_csv('temp.csv', index = False)
 '''
 
+model = LGBMRegressor(learning_rate = 0.1, max_depth = 8, min_child_weight = 1, n_estimators = 100, random_seed = 42, subsample = 0.9)
+model_list = cross_val(X, y, model, 4)
 
-model_list = []
-kf = KFold(n_splits = 4, shuffle = True)
-kf_index = 0
-for train_indices, test_indices in kf.split(X):
-    X_train, X_test = X[train_indices], X[test_indices]
-    y_train, y_test = y[train_indices], y[test_indices]
-    
-    ## best parameters from the CV
-    model = LGBMRegressor(learning_rate = 0.1, max_depth = 8, min_child_weight = 1, n_estimators = 100, random_seed = 42, subsample = 0.9)
-        
-    model.fit(X_train, y_train)
-    model_list.append(model)
-    kf_index += 1
-    
-    print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train, model.predict(X_train)), '.5f')) + \
-          ' , Test : ' + str(format(competition_metric(y_test, model.predict(X_test)), '.5f')))
-    
-    # print the errors for Jan months
-    train_jan_filter = X_train[:, new_year_index] == 1
-    test_jan_filter = X_test[:, new_year_index] == 1
-
-    print(str(kf_index) + ',' + ' Train : ' + str(format(competition_metric(y_train[train_jan_filter], model.predict(X_train[train_jan_filter])), '.5f')) + \
-          ' , Test : ' + str(format(competition_metric(y_test[test_jan_filter], model.predict(X_test[test_jan_filter])),'.5f')) + \
-          ', Train Entries : ' + str(train_jan_filter.sum()) + ', Test Entries : ' + str(test_jan_filter.sum()))
-
+'''
 df_feature_importance = pd.DataFrame(list(zip([x for x in input_cols if x != 'target'], \
                                               model.feature_importances_)),\
                                      columns = ['column_name', 'feature_importance'])
 df_feature_importance.to_csv('temp2.csv', index = False)
+'''
 
-
+sys.exit()
 ## prepare the submission
 df_submit = feature_prep(201801).loc[:, :]
 df_submit['Volume'] = np.mean([clf.predict(df_submit[input_cols].as_matrix()) for clf in model_list], axis = 0)
