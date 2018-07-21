@@ -3,6 +3,10 @@ import numpy as np
 import sys
 import os
 import time
+import itertools
+import gc
+import pickle
+from datetime import datetime
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
@@ -172,3 +176,156 @@ def grid_search_sample_weight(model, X, y, \
         cv_df_list.append(grid_search_results)
 
     return(pd.concat(cv_df_list, axis = 0))
+
+def stepwise_model(df_train, model, model_to_use, input_cols, target = 'target',
+                   top_features = None,
+                   df_val = None, df_test = None, end_length = None):
+    print('Running Stepwise Model !')
+    print('Reading Data !')
+    root_dir = './'
+    current_model_to_use = model_to_use
+    start_length = 0
+    if(top_features is None):
+        top_features = list(input_cols)
+    if(end_length is None):
+        end_length = min(len(input_cols), len(top_features))
+
+    y_train = df_train[target].as_matrix()
+
+    if(df_val is not None):
+        y_val   = df_val[target].as_matrix()
+    if(df_test is not None):
+        y_test  = df_test[target].as_matrix()
+
+    df_stepwise_features_dict = {'selected_features_length':[],
+                                 # 'selected_features':[],
+                                 'iterating_feature':[],
+                                 'train_auc':[],
+                                 'val_auc':[],
+                                 'test_auc':[],
+                                 # 'num_trees':[],
+                                 'best_feature':[],
+                                 'best_feature_row':[]}
+
+    # if some already existing iterations are present
+    if(os.path.isfile(root_dir + 'df_stepwise_features_%d_%s.csv' % (end_length, current_model_to_use))):
+        df_stepwise_features = pd.read_csv(root_dir + 'df_stepwise_features_%d_%s.csv' % (end_length, current_model_to_use))
+        for col in df_stepwise_features.columns.tolist():
+            df_stepwise_features_dict[col] = df_stepwise_features[col].tolist()
+    else:
+        df_stepwise_features = pd.DataFrame()
+
+
+    selected_features = []
+    columns_already_tried = []
+
+    # if partially complete iterations are present, pick them up
+    if(len(df_stepwise_features) > 0):
+        selected_features = df_stepwise_features['best_feature'].tolist()
+        selected_features_temp = list(selected_features)
+        selected_features = []
+        for element in selected_features_temp:
+            if(element not in selected_features):
+                selected_features.append(element)
+        del selected_features_temp
+
+        columns_already_tried = df_stepwise_features.loc[df_stepwise_features['selected_features_length'] == max(df_stepwise_features['selected_features_length']), \
+                                                   'iterating_feature'].unique().tolist()
+
+        # if the iteration was incomplete, ie all columns were not tested
+        if('NotObtained' in selected_features):
+            selected_features = selected_features[:-1]
+        else:
+            columns_already_tried = []
+
+    # for len_input_columns in range(start_length, end_length):
+    while(len(selected_features) < end_length and len(selected_features) < len(top_features)):
+        print('Current Input Columns : ' + str(selected_features))
+        print('Current Input Columns Size : %d' % (len(selected_features)))
+        print('Num Columns Already Tried : %d' % (len(columns_already_tried)))
+
+        # columns to try will be those which have not yet been added in the top features
+        columns_to_try = [x for x in top_features if x not in selected_features and x not in columns_already_tried]
+        # if already existing file containing the iterations is present
+        print("%3d Columns to try" % len(columns_to_try))
+        
+        # iterate over the available columns, keeping the columns selected till now
+        time_start = datetime.now()
+        for curr_new_column in columns_to_try:
+            # train model on selected features + new feature to try
+            input_cols = selected_features + [curr_new_column]
+
+            X_train = df_train[input_cols].as_matrix()
+
+            if(df_val is not None):
+                X_val   = df_val[input_cols].as_matrix()
+            if(df_test is not None):
+                X_test  = df_test[input_cols].as_matrix()
+
+
+            gc.collect()
+            gc.collect()
+
+            model.fit(X_train, y_train)
+
+
+            curr_train_auc = roc_auc_score(y_train, \
+                                           model.predict_proba(X_train)[:, 1])
+            if(df_val is not None):
+                curr_val_auc = roc_auc_score(y_val, \
+                                             model.predict_proba(X_val)[:, 1])
+            else:
+                curr_val_auc = curr_train_auc
+
+            if(df_test is not None):
+                curr_test_auc = roc_auc_score(y_test, \
+                                          model.predict_proba(X_test)[:, 1])
+            else:
+                curr_test_auc = 0
+
+            df_stepwise_features_dict['selected_features_length'].append(len(selected_features))
+            df_stepwise_features_dict['iterating_feature'].append(curr_new_column)
+            df_stepwise_features_dict['train_auc'].append(curr_train_auc)
+            df_stepwise_features_dict['val_auc'].append(curr_val_auc)
+            df_stepwise_features_dict['test_auc'].append(curr_test_auc)
+            # df_stepwise_features_dict['num_trees'].append(curr_num_trees)
+            df_stepwise_features_dict['best_feature'].append('NotObtained')
+            df_stepwise_features_dict['best_feature_row'].append(0)
+
+            # save the iteration for preservation
+            df_stepwise_features = pd.DataFrame(df_stepwise_features_dict)[['selected_features_length','iterating_feature','train_auc','val_auc','test_auc','best_feature','best_feature_row']]
+            df_stepwise_features.to_csv(root_dir + 'df_stepwise_features_%d_%s.csv' % (end_length, current_model_to_use), index = False)
+        
+        # print time taken
+        time_end = datetime.now()
+        time_delta = time_end - time_start
+        time_delta_hours = time_delta.seconds//(60 * 60)
+        time_delta_minutes = (time_delta.seconds - (time_delta_hours * 3600))//60
+        time_delta_seconds = (time_delta.seconds - time_delta_hours * 3600 - time_delta_minutes * 60)
+        print ('Iterated in %2d hrs, %2d mins, %2d secs' % (time_delta_hours, time_delta_minutes, time_delta_seconds))
+        # time_start = datetime.now()
+
+        # get the new feature with the highest auc score
+        df_stepwise_features = df_stepwise_features.loc[df_stepwise_features['selected_features_length'] == len(selected_features), :]
+        selected_features.append(df_stepwise_features.loc[df_stepwise_features['val_auc'] == max(df_stepwise_features['val_auc'])]['iterating_feature'].values[0])
+
+        # print (selected_features)
+        # change the NotObtained in best_feature to reflect the update
+        df_stepwise_features = pd.read_csv(root_dir + 'df_stepwise_features_%d_%s.csv' % (end_length, current_model_to_use))
+        # print(len(df_stepwise_features.loc[df_stepwise_features['best_feature'] == 'NotObtained', 'best_feature']))
+        df_stepwise_features.loc[df_stepwise_features['best_feature'] == 'NotObtained', 'best_feature'] = selected_features[-1]
+        # print(len(df_stepwise_features.loc[df_stepwise_features['best_feature'] == df_stepwise_features['iterating_feature'], 'best_feature_row']))
+        df_stepwise_features.loc[df_stepwise_features['best_feature'] == df_stepwise_features['iterating_feature'], 'best_feature_row'] = 1
+        # print(df_stepwise_features['best_feature_row'].sum())
+        # print(df_stepwise_features.loc[df_stepwise_features['best_feature'] == df_stepwise_features['iterating_feature'], 'best_feature_row'].sum())
+        df_stepwise_features.to_csv(root_dir + 'df_stepwise_features_%d_%s.csv' % (end_length, current_model_to_use), index = False)
+
+        df_stepwise_features_dict['best_feature'] = df_stepwise_features['best_feature'].tolist()
+        df_stepwise_features_dict['best_feature_row'] = df_stepwise_features['best_feature_row'].tolist()
+
+        print (selected_features[-1])
+
+        # reinitialize some variables
+        columns_already_tried = []
+
+    print('Done !') 
