@@ -5,6 +5,7 @@ import gc
 import pickle
 
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import GridSearchCV, KFold
 from lightgbm import LGBMRegressor
 
 def rmse(y_true, y_pred):
@@ -33,7 +34,24 @@ def get_curr_dt():
 
     return(''.join(dt))
 
+def grid_search_sample_weight(model, X, y, \
+                              search_params_dict, \
+                              scoring = 'mean_squared_error', cv = 3, \
+                              sample_weight_list = [1]):
+    # code for grid search
+    cv_df_list = []
+    for sample_weight_coef in sample_weight_list:
+        grid_search = GridSearchCV(model, search_params_dict, scoring = scoring, cv = cv)
+        grid_search.fit(X, y, sample_weight = np.array(y * (sample_weight_coef) + 1))
+        grid_search_results = pd.DataFrame(grid_search.cv_results_)
+        grid_search_results['sample_weight'] = sample_weight_coef
+        cv_df_list.append(grid_search_results)
+
+    return(pd.concat(cv_df_list, axis = 0))
+
 train = False
+test = False
+study_models = True
 targets = 10
 
 if(train == True):
@@ -44,8 +62,8 @@ if(train == True):
 
         keep_columns = [x for x in df.columns.tolist() if x not in ['week', 'target']]
 
-        # df_train = df.loc[df['week'] <= max(df['week']) - 10, :]
-        df_train = df.copy()
+        df_train = df.loc[df['week'] <= max(df['week']) - 10, :]
+        # df_train = df.copy()
         df_test = df.loc[df['week'] > max(df['week']) - 10, :]
         del df
 
@@ -61,13 +79,27 @@ if(train == True):
 
         parameters = {'learning_rate'    : 0.1,
                       'max_depth'        : 5,
-                      'min_child_weight' : 50,
+                      'min_child_weight' : 20,
                       'random_seed'      : 42,
                       'n_estimators'     : 50,
-                      'subsample'        : 1.0}
+                      'subsample'        : 0.8,
+                      'colsample_bytree' : 0.8}
+
+        search_params_dict = {
+            'learning_rate'    : [0.1],
+            'max_depth'        : [3, 5],
+            'min_child_weight' : [20, 50],
+            'random_seed'      : [42],
+            'n_estimators'     : [50],
+            'subsample'        : [0.8, 1.0],
+            'colsample_bytree' : [0.3, 0.8]
+        }
 
         model = LGBMRegressor(**parameters)
+
         model.fit(X_train, y_train)
+        # grid_search = grid_search_sample_weight(model, X_train, y_train, search_params_dict)
+        # grid_search.to_csv('../models/model_%d_grid_search.csv' % (i), index = False)        
         pred = model.predict(X_test)
 
         with open('../models/model_%d' % (i), 'wb') as f:
@@ -80,7 +112,7 @@ if(train == True):
 
     print('total rmse ', np.sqrt(error[0]/error[1]))
 
-else:
+if(test == True):
     df_list = []
     for i in range(1, targets + 1):
         df = pd.read_csv('../inputs/train_past_3_future_10_cutoff_1_target_%d_test.csv' % (i))
@@ -111,4 +143,22 @@ else:
     df['num_orders'] = np.exp(df['num_orders'])
 
     df[['id', 'num_orders']].to_csv('../submissions/%s.csv' % (get_curr_dt()), index = False)
+
+
+if(study_models == True):
+    # get feature names
+    df = pd.read_csv('../inputs/train_past_3_future_10_cutoff_1_target_%d_train.csv' % (1), nrows = 10)
+    keep_columns = [x for x in df.columns.tolist() if x not in ['week', 'target']]
+
+    df_list = []
+    for i in range(1, targets + 1):
+        with open('../models/model_%d' % (i), 'rb') as f:
+            model = pickle.load(f)
+
+        df = pd.DataFrame({'feature':keep_columns, 'importance':model.feature_importances_})
+        df['model_target'] = i
+        df_list.append(df.copy())
+
+    pd.concat(df_list)[['model_target', 'feature', 'importance']].to_csv('../models/feature_importance.csv', 
+                                                                         index = False)
 

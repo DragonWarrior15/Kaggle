@@ -82,7 +82,7 @@ def create_features(df, df_center, df_meal, past_week_delta = 1, future_week_del
                               'city_code'     in x) and '_prev_week_' in x],
                           axis = 1, inplace = True)
 
-        df_curr_week = df_curr_week.loc[~df_curr_week['num_orders_prev_week_' + str(i)].isnull(), :]
+        # df_curr_week = df_curr_week.loc[~df_curr_week['num_orders_prev_week_' + str(i)].isnull(), :]
 
     df_curr_week_list = []
     # now add target information by duplicating
